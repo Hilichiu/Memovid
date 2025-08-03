@@ -70,7 +70,7 @@ class VideoProcessor {
 
       // Calculate total duration considering both photos and videos
       const totalDuration = photos.reduce((total, media) => {
-        if (media.type === 'video' && media.duration) {
+        if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
           return total + media.duration;
         } else {
           return total + settings.photoDuration;
@@ -187,9 +187,13 @@ class VideoProcessor {
         if (media.type === 'image') {
           args.push('-loop', '1', '-t', settings.photoDuration.toString(), '-i', `media_${i}.jpg`);
         } else {
-          // For video files, use their full duration (no clipping)
+          // For video files, use their full duration or clip to photo duration based on setting
           const extension = media.file.name.split('.').pop()?.toLowerCase() || 'mp4';
-          args.push('-i', `media_${i}.${extension}`);
+          if (settings.applyPhotoDurationToVideos) {
+            args.push('-t', settings.photoDuration.toString(), '-i', `media_${i}.${extension}`);
+          } else {
+            args.push('-i', `media_${i}.${extension}`);
+          }
         }
       }
 
@@ -310,7 +314,7 @@ class VideoProcessor {
 
     // Calculate total duration for fade timing
     const totalVideoDuration = photos.reduce((total, media) => {
-      if (media.type === 'video' && media.duration) {
+      if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
         return total + media.duration;
       } else {
         return total + photoDuration;
@@ -344,7 +348,7 @@ class VideoProcessor {
     // Single media case
     if (photos.length === 1) {
       const media = photos[0];
-      const mediaDuration = media.type === 'video' && media.duration ? media.duration : photoDuration;
+      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
       return filter;
     }
@@ -352,17 +356,17 @@ class VideoProcessor {
     // Fade throughout (multiple media)
     // Handle individual fade timings for mixed media
     let currentTime = 0;
-    
+
     // First media: fade in and fade out
     const firstMedia = photos[0];
-    const firstDuration = firstMedia.type === 'video' && firstMedia.duration ? firstMedia.duration : photoDuration;
+    const firstDuration = (firstMedia.type === 'video' && firstMedia.duration && !settings.applyPhotoDurationToVideos) ? firstMedia.duration : photoDuration;
     filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${firstDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
     currentTime += firstDuration;
 
     // Middle media: fade in and fade out
     for (let i = 1; i < photos.length - 1; i++) {
       const media = photos[i];
-      const mediaDuration = media.type === 'video' && media.duration ? media.duration : photoDuration;
+      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
       filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
       currentTime += mediaDuration;
     }

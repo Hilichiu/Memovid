@@ -1,20 +1,25 @@
 import React from 'react';
 import { Clock, Sparkles } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
-import { VideoSettings } from '../types';
+import { VideoSettings, Photo } from '../types';
 
 interface VideoControlsProps {
   settings: VideoSettings;
   onSettingsChange: (settings: VideoSettings) => void;
   totalDuration: number;
+  photos: Photo[];
 }
 
 const VideoControls: React.FC<VideoControlsProps> = ({
   settings,
   onSettingsChange,
-  totalDuration
+  totalDuration,
+  photos
 }) => {
   const { t } = useTranslation();
+
+  // Check if there are any videos uploaded
+  const hasVideos = photos.some(photo => photo.type === 'video');
 
   const updateSettings = (key: keyof VideoSettings, value: any) => {
     onSettingsChange({
@@ -61,6 +66,28 @@ const VideoControls: React.FC<VideoControlsProps> = ({
         {totalDuration > 0 && (
           <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
             {t('totalVideoLength', { duration: formatDuration(totalDuration) })}
+          </div>
+        )}
+
+        {/* Video Duration Setting - only show if videos are present */}
+        {hasVideos && (
+          <div className="mt-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.applyPhotoDurationToVideos}
+                onChange={(e) => updateSettings('applyPhotoDurationToVideos', e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('applyToVideos')}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('applyPhotoDurationToVideos')}
+                </span>
+              </div>
+            </label>
           </div>
         )}
       </div>

@@ -36,7 +36,8 @@ const VideoCreator: React.FC = () => {
     photoDuration: 3,
     fadeInOut: true,
     fadePosition: 'beginning-end',
-    audioFadeInOut: true
+    audioFadeInOut: true,
+    applyPhotoDurationToVideos: false
   });
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
@@ -198,7 +199,7 @@ const VideoCreator: React.FC = () => {
 
   // Calculate total duration considering both photos and videos
   const totalDuration = photos.reduce((total, media) => {
-    if (media.type === 'video' && media.duration) {
+    if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
       return total + media.duration;
     } else {
       return total + settings.photoDuration;
@@ -263,6 +264,7 @@ const VideoCreator: React.FC = () => {
                 settings={settings}
                 onSettingsChange={setSettings}
                 totalDuration={totalDuration}
+                photos={photos}
               />
             </div>
           </div>
@@ -276,7 +278,7 @@ const VideoCreator: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{t('photoOrder')}</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {t('photoOrderDescription')}
-                {photos.length > 0 && ` ${t('totalVideoLength', { duration: totalDuration.toString() })}`}
+                {photos.length > 0 && ` ${t('totalVideoLength', { duration: Math.round(totalDuration).toString() })}`}
               </p>
             </div>
             <div className="p-6">
