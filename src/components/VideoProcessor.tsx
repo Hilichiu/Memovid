@@ -17,9 +17,10 @@ class VideoProcessor {
       console.log('FFmpeg log:', message);
     });
 
-    // Progress listener: ratio 0 to 1 -> map to 20-80
+    // Progress listener: ratio 0 to 1 -> map to 70-95% and cap at 95%
     ffmpeg.on('progress', ({ progress }: { progress: number }) => {
-      onProgress(Math.floor(20 + progress * 60));
+      const mappedProgress = Math.floor(70 + progress * 25);
+      onProgress(Math.min(mappedProgress, 95)); // Cap at 95% to prevent overflow
     });
 
     try {
@@ -136,12 +137,14 @@ class VideoProcessor {
         '-movflags', '+faststart',
         '-shortest', // Stop at shortest input
         'output.mp4'
-      ); console.log('FFmpeg command:', args.join(' '));
-      onProgress(70);
+      ); 
+      
+      console.log('FFmpeg command:', args.join(' '));
+      // Let FFmpeg progress listener handle the progress from here
 
       // Run encoding
       await ffmpeg.exec(args);
-      onProgress(90);
+      onProgress(95);
 
       // Check if output file exists and has content
       const files = await ffmpeg.listDir('/');
