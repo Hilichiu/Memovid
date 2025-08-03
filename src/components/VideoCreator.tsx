@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Music, Image, Download, Play, Settings } from 'lucide-react';
 import PhotoUploader from './PhotoUploader';
 import AudioUploader from './AudioUploader';
@@ -20,11 +20,18 @@ const VideoCreator: React.FC = () => {
   const [settings, setSettings] = useState<VideoSettings>({
     photoDuration: 3,
     fadeInOut: true,
-    fadePosition: 'throughout',
+    fadePosition: 'beginning-end',
     audioFadeInOut: true
   });
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
+
+  // Reset download state when photos, audio, or settings change after a video has been generated
+  useEffect(() => {
+    if (downloadUrl) {
+      setDownloadUrl(null);
+    }
+  }, [photos, audioFile, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateVideo = async () => {
     if (photos.length === 0) {
