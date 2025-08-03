@@ -17,9 +17,8 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [livePhotos, setLivePhotos] = useState<Photo[]>(photos);
   const [originalPhotos, setOriginalPhotos] = useState<Photo[]>(photos);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<string>('Ready...');
   const dragCounter = useRef(0);
-  const touchMoveThreshold = 5; // Reduced threshold for better responsiveness
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Update live photos when props change
@@ -31,9 +30,13 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   }, [photos, isDragging]);
 
   useEffect(() => {
-    // Detect if we're on a mobile device
+    // Better mobile detection that works on iOS
     const checkMobile = () => {
-      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                           ('ontouchstart' in window) || 
+                           (navigator.maxTouchPoints > 0);
+      setIsMobile(isMobileDevice);
+      setDebugInfo(`Mobile detected: ${isMobileDevice}, UA: ${navigator.userAgent.substring(0, 50)}`);
     };
     checkMobile();
   }, []);
@@ -146,64 +149,68 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
     dragCounter.current = 0;
   };
 
-  // Mobile touch handlers - Simplified approach for iOS
+  // Simplified mobile touch handlers for iOS
   const handleTouchStart = (e: React.TouchEvent, index: number) => {
     if (!isMobile) return;
 
-    setDebugInfo(`Touch start: ${index}`);
+    setDebugInfo(`📱 Touch START on photo ${index}`);
+    
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     setDraggedIndex(index);
     setIsDragging(false);
     setOriginalPhotos([...photos]);
 
-    // Prevent iOS context menu and default behaviors
+    // Prevent iOS default behaviors more aggressively
     e.preventDefault();
     e.stopPropagation();
+    
+    // Set a timeout to show we got the touch
+    setTimeout(() => {
+      setDebugInfo(`📱 Touch START processed for photo ${index}`);
+    }, 100);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile || !touchStartPos || draggedIndex === null) return;
+    if (!isMobile || !touchStartPos || draggedIndex === null) {
+      setDebugInfo(`❌ Touch MOVE blocked: mobile=${isMobile}, startPos=${!!touchStartPos}, dragged=${draggedIndex}`);
+      return;
+    }
 
     const touch = e.touches[0];
     const deltaX = Math.abs(touch.clientX - touchStartPos.x);
     const deltaY = Math.abs(touch.clientY - touchStartPos.y);
+    const totalDelta = deltaX + deltaY;
 
-    setDebugInfo(`Touch move: delta(${deltaX},${deltaY}) dragging:${isDragging}`);
+    setDebugInfo(`👆 MOVE: delta=${totalDelta.toFixed(0)}, dragging=${isDragging}`);
 
-    // Start dragging if moved beyond threshold
-    if (!isDragging && (deltaX > touchMoveThreshold || deltaY > touchMoveThreshold)) {
-      setDebugInfo(`Starting drag: delta(${deltaX},${deltaY})`);
+    // Much lower threshold for iOS
+    if (!isDragging && totalDelta > 3) {
+      setDebugInfo(`🚀 DRAG START! Delta: ${totalDelta.toFixed(0)}`);
       setIsDragging(true);
     }
 
     if (isDragging) {
-      // Simple approach: find the closest photo element to touch point
-      let closestIndex = -1;
-      let closestDistance = Infinity;
+      // Very simple approach - just check which photo we're over
+      const elements = document.querySelectorAll('[data-photo-index]');
+      let targetIndex = -1;
 
-      livePhotos.forEach((_, index) => {
-        const element = document.querySelector(`[data-photo-index="${index}"]`);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          const distance = Math.sqrt(
-            Math.pow(touch.clientX - centerX, 2) + Math.pow(touch.clientY - centerY, 2)
-          );
-
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = index;
-          }
+      elements.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        if (
+          touch.clientX >= rect.left &&
+          touch.clientX <= rect.right &&
+          touch.clientY >= rect.top &&
+          touch.clientY <= rect.bottom
+        ) {
+          targetIndex = parseInt(element.getAttribute('data-photo-index') || '0');
         }
       });
 
-      // Perform live reordering if over a different photo
-      if (closestIndex !== -1 && closestIndex !== draggedIndex && closestIndex !== dragOverIndex) {
-        setDebugInfo(`Reordering: ${draggedIndex} → ${closestIndex}`);
-        performLiveReorder(draggedIndex, closestIndex);
-        setDragOverIndex(closestIndex);
+      if (targetIndex !== -1 && targetIndex !== draggedIndex && targetIndex !== dragOverIndex) {
+        setDebugInfo(`🔄 REORDER: ${draggedIndex} → ${targetIndex}`);
+        performLiveReorder(draggedIndex, targetIndex);
+        setDragOverIndex(targetIndex);
       }
     }
 
@@ -214,15 +221,16 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isMobile) return;
 
-    setDebugInfo(`Touch end: dragging=${isDragging}`);
+    setDebugInfo(`🏁 Touch END: was dragging=${isDragging}`);
 
     if (isDragging) {
-      // Commit the live reordering to the parent component
-      setDebugInfo('Committing reorder');
+      setDebugInfo(`✅ COMMIT reorder to parent`);
       onReorder(livePhotos);
+    } else {
+      setDebugInfo(`❌ No drag - no reorder`);
     }
 
-    // Reset states
+    // Reset all states
     setDraggedIndex(null);
     setDragOverIndex(null);
     setTouchStartPos(null);
@@ -250,20 +258,25 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
         ref={containerRef}
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
         style={{
-          // iOS specific touch handling
+          // Aggressive iOS touch handling
           WebkitUserSelect: 'none',
           userSelect: 'none',
           WebkitTouchCallout: 'none',
-          touchAction: isMobile ? 'pan-y' : 'auto', // Allow vertical scrolling but prevent horizontal
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: isMobile ? 'none' : 'auto', // Block all default touch behaviors
         }}
       >
-        {/* Debug overlay for iOS */}
-        {isMobile && debugInfo && (
-          <div className="fixed top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-xs z-50">
-            Debug: {debugInfo}
-            <br />Mobile: {isMobile ? 'Yes' : 'No'}
-            <br />Dragging: {isDragging ? 'Yes' : 'No'}
-            <br />Dragged: {draggedIndex}
+        {/* Debug overlay for iOS - always visible on mobile */}
+        {isMobile && (
+          <div className="fixed top-4 left-4 bg-black bg-opacity-90 text-white p-3 rounded text-xs z-50 max-w-xs">
+            <div className="font-bold text-yellow-300">🔧 iOS Debug Panel</div>
+            <div>Mobile: {isMobile ? '✅ YES' : '❌ NO'}</div>
+            <div>Dragging: {isDragging ? '🟢 YES' : '⚪ NO'}</div>
+            <div>Dragged Photo: {draggedIndex !== null ? `#${draggedIndex + 1}` : 'None'}</div>
+            <div className="mt-1 text-yellow-200">Status: {debugInfo}</div>
+            <div className="mt-1 text-xs text-gray-300">
+              Touch a photo and drag to test
+            </div>
           </div>
         )}
 
@@ -291,11 +304,12 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
             `}
             style={{
               transform: isDragging && draggedIndex === index ? 'rotate(5deg)' : undefined,
-              // iOS specific touch handling
+              // Aggressive iOS touch prevention
               WebkitUserSelect: 'none',
               userSelect: 'none',
               WebkitTouchCallout: 'none',
-              touchAction: isMobile ? 'manipulation' : 'auto',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'none', // Block all touch behaviors on photo elements
             }}
           >
             {/* Drag Handle */}
