@@ -10,11 +10,11 @@ interface AudioUploaderProps {
   onSettingsChange: (settings: VideoSettings) => void;
 }
 
-const AudioUploader: React.FC<AudioUploaderProps> = ({ 
-  audioFile, 
-  onAudioChange, 
-  settings, 
-  onSettingsChange 
+const AudioUploader: React.FC<AudioUploaderProps> = ({
+  audioFile,
+  onAudioChange,
+  settings,
+  onSettingsChange
 }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,11 +37,11 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
     }
 
     const url = URL.createObjectURL(file);
-    
+
     // Get audio duration
     const audio = new Audio();
     audio.src = url;
-    
+
     audio.addEventListener('loadedmetadata', () => {
       const newAudio: AudioFile = {
         file,
@@ -79,7 +79,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
         onChange={handleFileSelect}
         className="hidden"
       />
-      
+
       {!audioFile ? (
         <button
           onClick={openFileDialog}
@@ -114,15 +114,15 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
               <X className="w-4 h-4" />
             </button>
           </div>
-          
-          <audio 
+
+          <audio
             ref={audioRef}
-            src={audioFile.url} 
-            controls 
+            src={audioFile.url}
+            controls
             className="w-full h-8"
             style={{ height: '32px' }}
           />
-          
+
           <button
             onClick={openFileDialog}
             className="mt-3 w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
@@ -138,7 +138,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
                 {t('audioFadeEffects')}
               </label>
             </div>
-            
+
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
