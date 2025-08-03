@@ -32,6 +32,9 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
     });
 
     onPhotosChange([...photos, ...newPhotos]);
+
+    // Reset the input value to ensure the same files can be selected again
+    event.target.value = '';
   };
 
   const removePhoto = (id: string) => {

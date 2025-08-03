@@ -51,6 +51,9 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
       };
       onAudioChange(newAudio);
     });
+
+    // Reset the input value to ensure the same file can be selected again
+    event.target.value = '';
   };
 
   const removeAudio = () => {

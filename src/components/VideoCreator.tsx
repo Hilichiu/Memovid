@@ -30,6 +30,7 @@ const VideoCreator: React.FC = () => {
   useEffect(() => {
     if (downloadUrl) {
       setDownloadUrl(null);
+      setProgress(0); // Reset progress when resetting download state
     }
   }, [photos, audioFile, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
