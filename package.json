@@ -1,9 +1,9 @@
 {
-  "name": "video-creator-app",
+  "name": "memovid",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://yourusername.github.io/video-creator-app",
+  "homepage": "https://hilichiu.github.io/Memovid",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
