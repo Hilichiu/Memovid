@@ -74,7 +74,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('selectedPhotos', { count: photos.length.toString() })}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto overflow-x-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto overflow-x-hidden p-2">
             {photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
@@ -86,7 +86,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
                 </div>
                 <button
                   onClick={() => removePhoto(photo.id)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+                  className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 shadow-lg"
                 >
                   <X className="w-3 h-3" />
                 </button>
