@@ -71,7 +71,7 @@
     "enableFadeEffects": "啟用淡入淡出效果",
     "betweenEachPhoto": "每張照片之間",
     "onlyAtBeginningEnd": "僅在開始和結束",
-    "createVideo": "製作影片（{{count}} 張照片{{plural}}）",
+    "createVideo": "製作影片（{{count}} 張照片）",
     "creatingVideo": "正在製作您的影片...",
     "creatingVideoDescription": "這可能需要幾分鐘時間。請不要關閉此頁面。",
     "complete": "{{progress}}% 完成",
