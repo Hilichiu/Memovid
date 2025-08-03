@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, X, Loader } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo } from '../types';
+import { createOptimizedPhotos } from '../utils/imageOptimization';
 
 interface PhotoUploaderProps {
   photos: Photo[];
@@ -11,30 +12,59 @@ interface PhotoUploaderProps {
 const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    const newPhotos: Photo[] = [];
+    setIsProcessing(true);
 
-    Array.from(files).forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        const id = Math.random().toString(36).substr(2, 9);
-        const url = URL.createObjectURL(file);
-        newPhotos.push({
-          id,
-          file,
-          url,
-          name: file.name
-        });
+    try {
+      const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+      if (fileArray.length === 0) {
+        setIsProcessing(false);
+        return;
       }
-    });
 
-    onPhotosChange([...photos, ...newPhotos]);
+      // Limit total photos to prevent memory issues
+      const remainingSlots = Math.max(0, 50 - photos.length); // Max 50 photos
+      const filesToProcess = fileArray.slice(0, remainingSlots);
 
-    // Reset the input value to ensure the same files can be selected again
-    event.target.value = '';
+      if (filesToProcess.length < fileArray.length) {
+        alert(`Maximum 50 photos allowed. Processing first ${filesToProcess.length} photos.`);
+      }
+
+      if (filesToProcess.length === 0) {
+        alert('Maximum photo limit reached (50 photos).');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create optimized photos with thumbnails
+      const newOptimizedPhotos = await createOptimizedPhotos(filesToProcess);
+
+      // Convert to Photo interface
+      const newPhotos: Photo[] = newOptimizedPhotos.map(optimized => ({
+        id: optimized.id,
+        file: optimized.file,
+        url: optimized.url,
+        thumbnailUrl: optimized.thumbnailUrl,
+        name: optimized.name,
+        width: optimized.width,
+        height: optimized.height
+      }));
+
+      onPhotosChange([...photos, ...newPhotos]);
+    } catch (error) {
+      console.error('Error processing photos:', error);
+      alert('Error processing some photos. Please try again.');
+    } finally {
+      setIsProcessing(false);
+      // Reset the input value
+      event.target.value = '';
+    }
   };
 
   const removePhoto = (id: string) => {
@@ -59,15 +89,20 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
 
       <button
         onClick={openFileDialog}
-        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg p-8 transition-colors duration-200 group"
+        disabled={isProcessing}
+        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg p-8 transition-colors duration-200 group"
       >
         <div className="text-center">
-          <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 mx-auto mb-3 transition-colors duration-200" />
+          {isProcessing ? (
+            <Loader className="w-12 h-12 text-blue-500 mx-auto mb-3 animate-spin" />
+          ) : (
+            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 mx-auto mb-3 transition-colors duration-200" />
+          )}
           <div className="text-lg font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 mb-1">
-            {t('selectPhotos')}
+            {isProcessing ? 'Processing photos...' : t('selectPhotos')}
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {t('selectPhotosDescription')}
+            {isProcessing ? 'Creating thumbnails for better performance' : t('selectPhotosDescription')}
           </div>
         </div>
       </button>
@@ -77,14 +112,15 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('selectedPhotos', { count: photos.length.toString() })}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto overflow-x-hidden p-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto overflow-x-hidden p-2">
             {photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                   <img
-                    src={photo.url}
+                    src={photo.thumbnailUrl || photo.url}
                     alt={`Photo ${index + 1}`}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
                 <button

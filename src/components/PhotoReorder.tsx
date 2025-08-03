@@ -217,7 +217,9 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
 
     e.preventDefault();
     e.stopPropagation();
-  }; if (photos.length === 0) {
+  };
+
+  if (photos.length === 0) {
     return (
       <div className="text-center py-12">
         <ImageIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
@@ -293,12 +295,13 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
             {/* Photo */}
             <div className="aspect-square w-full">
               <img
-                src={photo.url}
+                src={photo.thumbnailUrl || photo.url}
                 alt={`Photo ${index + 1}`}
                 className={`
                   w-full h-full object-cover rounded-lg
                   ${isMobile ? 'pointer-events-none' : ''}
                 `}
+                loading="lazy"
                 style={{
                   // Prevent iOS context menu
                   WebkitUserSelect: 'none',

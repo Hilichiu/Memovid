@@ -8,6 +8,7 @@ import VideoProcessor from './VideoProcessor';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo, AudioFile, VideoSettings } from '../types';
 import { debugVideoCreation } from '../utils/videoDebug';
+import { cleanupPhotoUrls } from '../utils/imageOptimization';
 
 const VideoCreator: React.FC = () => {
   const { t } = useTranslation();
@@ -116,6 +117,16 @@ const VideoCreator: React.FC = () => {
     };
     checkIOS();
   }, []);
+
+  // Cleanup photo URLs when component unmounts or photos change
+  useEffect(() => {
+    return () => {
+      // Cleanup all photo URLs on unmount
+      if (photos.length > 0) {
+        cleanupPhotoUrls(photos);
+      }
+    };
+  }, [photos]);
 
   const handleCreateVideo = async () => {
     if (photos.length === 0) {

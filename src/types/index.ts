@@ -2,7 +2,10 @@ export interface Photo {
   id: string;
   file: File;
   url: string;
+  thumbnailUrl?: string;
   name: string;
+  width?: number;
+  height?: number;
 }
 
 export interface AudioFile {
