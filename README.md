@@ -21,7 +21,7 @@ A beautiful, modern web application that turns your favorite photos into stunnin
 
 ## 🎯 Live Demo
 
-Visit Memovid: [https://hilichiu.github.io/memovid](https://hilichiu.github.io/memovid)
+Visit Memovid: [https://hilichiu.github.io/memovid](https://hilichiu.github.io/Memovid)
 
 > **Turn your memories into movies - all in your browser!**
 
