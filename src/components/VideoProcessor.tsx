@@ -72,13 +72,25 @@ class VideoProcessor {
         let audioInputName = inputFileName;
         if (isVideoFile) {
           console.log('Extracting audio from video file...');
+          // Convert to AAC format instead of trying to copy PCM to ADTS
           await ffmpeg.exec([
             '-i', inputFileName,
             '-vn', // No video
-            '-acodec', 'copy',
+            '-acodec', 'aac',
+            '-ar', '48000', // Set sample rate
+            '-ac', '2', // Set to stereo
+            '-b:a', '128k', // Set bitrate
             'extracted_audio.aac'
           ]);
           audioInputName = 'extracted_audio.aac';
+          
+          // Verify audio extraction worked
+          const extractedFiles = await ffmpeg.listDir('/');
+          const extractedFile = extractedFiles.find(f => f.name === 'extracted_audio.aac');
+          console.log('Audio extraction completed. Files:', extractedFiles.map(f => f.name));
+          if (!extractedFile) {
+            throw new Error('Failed to extract audio from video file');
+          }
         }
 
         if (audio.duration < totalDuration) {
@@ -86,32 +98,51 @@ class VideoProcessor {
           let audioArgs = [
             '-stream_loop', loopCount.toString(),
             '-i', audioInputName,
-            '-t', totalDuration.toString(),
-            '-c:a', 'aac'
+            '-t', totalDuration.toString()
           ];
 
           // Add audio fade effects if enabled
           if (settings.audioFadeInOut) {
-            audioArgs.splice(-2, 0, '-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+            audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
           }
 
-          audioArgs.push('audio.aac');
+          audioArgs.push(
+            '-c:a', 'aac',
+            '-ar', '48000', // Ensure consistent sample rate
+            '-ac', '2',     // Ensure stereo output
+            'audio.aac'
+          );
+          
           await ffmpeg.exec(audioArgs);
         } else {
           let audioArgs = [
             '-i', audioInputName,
-            '-t', totalDuration.toString(),
-            '-c:a', 'aac'
+            '-t', totalDuration.toString()
           ];
 
           // Add audio fade effects if enabled
           if (settings.audioFadeInOut) {
-            audioArgs.splice(-2, 0, '-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+            audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
           }
 
-          audioArgs.push('audio.aac');
+          audioArgs.push(
+            '-c:a', 'aac',
+            '-ar', '48000', // Ensure consistent sample rate
+            '-ac', '2',     // Ensure stereo output
+            'audio.aac'
+          );
+          
           await ffmpeg.exec(audioArgs);
         }
+        
+        // Verify the audio file was created successfully
+        const audioFiles = await ffmpeg.listDir('/');
+        const audioFile = audioFiles.find(f => f.name === 'audio.aac');
+        console.log('Audio processing completed. Files:', audioFiles.map(f => f.name));
+        if (!audioFile) {
+          throw new Error('Failed to process audio: audio.aac file was not created');
+        }
+        
         onProgress(50);
       }      // Create filter complex for video
       const filterComplex = this.buildFilter(photos, settings);
