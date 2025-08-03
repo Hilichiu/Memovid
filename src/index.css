@@ -106,3 +106,21 @@ input:focus-visible {
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* iOS touch optimization for photo reordering */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Prevent iOS bounce and zoom */
+@media screen and (max-width: 768px) {
+  body {
+    touch-action: pan-x pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
