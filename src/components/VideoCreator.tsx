@@ -10,6 +10,19 @@ import { Photo, AudioFile, VideoSettings } from '../types';
 import { debugVideoCreation } from '../utils/videoDebug';
 import { cleanupPhotoUrls } from '../utils/imageOptimization';
 
+// Generate filename based on current date and time
+const generateVideoFilename = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+
+  return `memovid-${year}-${month}-${day}-${hours}${minutes}${seconds}.mp4`;
+};
+
 const VideoCreator: React.FC = () => {
   const { t } = useTranslation();
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -47,9 +60,10 @@ const VideoCreator: React.FC = () => {
     }
 
     // Traditional download for non-iOS
+    const filename = generateVideoFilename();
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = 'my-video.mp4';
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -64,7 +78,8 @@ const VideoCreator: React.FC = () => {
       if (navigator.share && 'canShare' in navigator) {
         const response = await fetch(downloadUrl);
         const blob = await response.blob();
-        const file = new File([blob], 'my-video.mp4', { type: 'video/mp4' });
+        const filename = generateVideoFilename();
+        const file = new File([blob], filename, { type: 'video/mp4' });
 
         // Check if sharing files is supported
         if (navigator.canShare({ files: [file] })) {
@@ -86,9 +101,10 @@ const VideoCreator: React.FC = () => {
       const tempUrl = URL.createObjectURL(blob);
 
       // Create a temporary link element with download attribute
+      const filename = generateVideoFilename();
       const link = document.createElement('a');
       link.href = tempUrl;
-      link.download = 'my-video.mp4';
+      link.download = filename;
       link.style.display = 'none';
 
       // Add to DOM, click, and remove
