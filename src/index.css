@@ -124,3 +124,20 @@ input:focus-visible {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Fix dark mode overscroll background */
+html {
+  background-color: #ffffff;
+}
+
+html.dark {
+  background-color: #111827;
+}
+
+body {
+  background-color: #ffffff;
+}
+
+body.dark {
+  background-color: #111827;
+}
