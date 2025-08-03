@@ -55,11 +55,55 @@ const VideoCreator: React.FC = () => {
   };
 
   // Function to proceed with iOS download after showing instructions
-  const proceedWithIOSDownload = () => {
+  const proceedWithIOSDownload = async () => {
     if (!downloadUrl) return;
 
-    // Open video in new tab for long-press saving
-    window.open(downloadUrl, '_blank');
+    try {
+      // Strategy 1: Try using Web Share API first (most reliable for iOS)
+      if (navigator.share && 'canShare' in navigator) {
+        const response = await fetch(downloadUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'my-video.mp4', { type: 'video/mp4' });
+
+        // Check if sharing files is supported
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'My Video',
+            text: 'Video created with Memovid'
+          });
+          setShowIOSInstructions(false);
+          return;
+        }
+      }
+
+      // Strategy 2: Create a direct download link that iOS can handle
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+
+      // Create a temporary URL for the blob
+      const tempUrl = URL.createObjectURL(blob);
+
+      // Create a temporary link element with download attribute
+      const link = document.createElement('a');
+      link.href = tempUrl;
+      link.download = 'my-video.mp4';
+      link.style.display = 'none';
+
+      // Add to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the temporary URL
+      setTimeout(() => URL.revokeObjectURL(tempUrl), 1000);
+
+    } catch (error) {
+      console.log('iOS download strategies failed, trying fallback:', error);
+      // Fallback: Open in new window (original approach)
+      window.open(downloadUrl, '_blank');
+    }
+
     setShowIOSInstructions(false);
   };
 
