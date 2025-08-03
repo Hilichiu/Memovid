@@ -1,26 +1,29 @@
-# Video Creator App
+# Memovid
 
-A beautiful, modern web application that turns your favorite photos into stunning videos with background music. Built with React, TypeScript, and FFmpeg.wasm for client-side video processing.
+A beautiful, modern web application that turns your favorite photos into stunning videos with background music. Transform your memories into cinematic experiences with client-side video processing.
 
-![Video Creator App](https://img.shields.io/badge/React-18.3.1-blue)
+![Memovid](https://img.shields.io/badge/React-18.3.1-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue)
 ![Vite](https://img.shields.io/badge/Vite-5.4.2-purple)
 ![FFmpeg.wasm](https://img.shields.io/badge/FFmpeg.wasm-0.12.15-red)
 
 ## ✨ Features
 
-- 📸 **Photo Upload**: Select and reorder multiple photos
-- 🎵 **Background Music**: Add audio with fade effects
+- 📸 **Photo Upload**: Select and reorder multiple photos with ease
+- 🎵 **Background Music**: Add audio with professional fade effects
 - ⚡ **Client-side Processing**: Everything runs in your browser - completely private
 - 🌓 **Dark/Light Theme**: Automatic theme switching
 - 🌍 **Bilingual Support**: English and Traditional Chinese (zh-TW)
 - 🎬 **Professional Effects**: Fade in/out effects for photos and audio
-- 📱 **Responsive Design**: Works on desktop and mobile devices
+- 📱 **Responsive Design**: Works perfectly on desktop and mobile devices
 - 🚀 **Fast Performance**: Built with Vite for optimal loading
+- 🎥 **HD Quality**: Generate beautiful 1080p videos
 
-## 🎯 Demo
+## 🎯 Live Demo
 
-Visit the live demo: [https://yourusername.github.io/video-creator-app](https://yourusername.github.io/video-creator-app)
+Visit Memovid: [https://hilichiu.github.io/memovid](https://hilichiu.github.io/memovid)
+
+> **Turn your memories into movies - all in your browser!**
 
 ## 🛠️ Technologies Used
 
@@ -42,8 +45,8 @@ Visit the live demo: [https://yourusername.github.io/video-creator-app](https://
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/video-creator-app.git
-cd video-creator-app
+git clone https://github.com/yourusername/memovid.git
+cd memovid
 ```
 
 2. Install dependencies:
@@ -70,18 +73,18 @@ npm run build
 npm run deploy
 ```
 
-## 📖 How to Use
+## 📖 How to Use Memovid
 
-1. **Upload Photos**: Click "Select Photos" to choose images from your device
-2. **Reorder Photos**: Drag and drop photos to change their order
-3. **Add Music**: Upload an audio file (optional)
-4. **Customize Settings**:
-   - Adjust photo duration
-   - Enable fade effects
+1. **📷 Upload Your Memories**: Click "Select Photos" to choose your favorite images
+2. **🔄 Arrange Your Story**: Drag and drop photos to create the perfect sequence
+3. **🎵 Add Soundtrack**: Upload an audio file to set the mood (optional)
+4. **⚙️ Customize Your Video**:
+   - Adjust how long each photo appears
+   - Enable beautiful fade effects
    - Choose fade positions (beginning/end or throughout)
-   - Enable audio fade effects
-5. **Create Video**: Click "Create Video" and wait for processing
-6. **Download**: Save your generated video to your device
+   - Add audio fade effects for professional touch
+5. **🎬 Create Your Memovid**: Click "Generate Video" and watch the magic happen
+6. **💾 Save & Share**: Download your HD video and share your memories
 
 ## 🔧 Configuration
 
@@ -91,12 +94,12 @@ If you want to use a different repository name:
 
 1. Update `base` in `vite.config.ts`:
 ```typescript
-base: '/your-repo-name/',
+base: '/memovid/',
 ```
 
 2. Update `homepage` in `package.json`:
 ```json
-"homepage": "https://yourusername.github.io/your-repo-name",
+"homepage": "https://yourusername.github.io/memovid",
 ```
 
 ### Supported File Formats
@@ -104,24 +107,39 @@ base: '/your-repo-name/',
 - **Images**: JPEG, PNG, WebP, GIF
 - **Audio**: MP3, WAV, OGG, M4A
 
-## 🌟 Features in Detail
+## 🌟 Why Choose Memovid?
 
-### Video Processing
+### 🎥 Professional Video Creation
 - Client-side video generation using FFmpeg.wasm
-- 1080p HD output (1920x1080)
-- Automatic aspect ratio handling
-- Professional fade effects
+- Stunning 1080p HD output (1920x1080)
+- Automatic aspect ratio handling with smart cropping
+- Cinematic fade effects for professional results
 
-### User Interface
-- Modern, clean design with Tailwind CSS
-- Responsive layout for all screen sizes
-- Dark mode support
-- Intuitive drag-and-drop interface
+### 🎨 Beautiful User Experience
+- Modern, intuitive design with Tailwind CSS
+- Responsive layout that works on any device
+- Dark mode support for comfortable viewing
+- Smooth drag-and-drop interface
 
-### Privacy & Security
-- No data uploaded to servers
+### 🔒 Privacy First
+- **No uploads required** - everything stays on your device
 - All processing happens locally in your browser
-- Your photos and videos never leave your device
+- Your photos and videos never leave your computer
+- No registration or account needed
+
+### 🌍 Accessible to Everyone
+- Bilingual interface (English & Traditional Chinese)
+- Works on any modern browser
+- No software installation required
+- Completely free to use
+
+## 💡 Perfect For
+
+- **Family Memories**: Turn vacation photos into shareable videos
+- **Special Occasions**: Create birthday or anniversary videos
+- **Social Media**: Generate engaging content for your feeds
+- **Presentations**: Make photo slideshows with background music
+- **Gifts**: Create personalized video gifts for loved ones
 
 ## 🤝 Contributing
 
@@ -129,7 +147,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
