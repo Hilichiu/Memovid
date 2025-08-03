@@ -60,14 +60,32 @@ class VideoProcessor {
         const audioData = new Uint8Array(await audio.file.arrayBuffer());
         console.log(`Converted audio to array buffer: ${audioData.length} bytes`);
 
-        await ffmpeg.writeFile('input_audio.mp3', audioData);
-        console.log(`Written audio file, size: ${audioData.length} bytes`);
+        // Determine if this is a video file that needs audio extraction
+        const isVideoFile = audio.file.type.startsWith('video/') ||
+          /\.(mp4|mov|avi|mkv|webm|3gp)$/i.test(audio.name);
+
+        const inputFileName = isVideoFile ? 'input_video_for_audio.mp4' : 'input_audio.mp3';
+        await ffmpeg.writeFile(inputFileName, audioData);
+        console.log(`Written ${isVideoFile ? 'video' : 'audio'} file: ${inputFileName}, size: ${audioData.length} bytes`);
+
+        // Extract audio from video if needed, or process audio directly
+        let audioInputName = inputFileName;
+        if (isVideoFile) {
+          console.log('Extracting audio from video file...');
+          await ffmpeg.exec([
+            '-i', inputFileName,
+            '-vn', // No video
+            '-acodec', 'copy',
+            'extracted_audio.aac'
+          ]);
+          audioInputName = 'extracted_audio.aac';
+        }
 
         if (audio.duration < totalDuration) {
           const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
           let audioArgs = [
             '-stream_loop', loopCount.toString(),
-            '-i', 'input_audio.mp3',
+            '-i', audioInputName,
             '-t', totalDuration.toString(),
             '-c:a', 'aac'
           ];
@@ -81,7 +99,7 @@ class VideoProcessor {
           await ffmpeg.exec(audioArgs);
         } else {
           let audioArgs = [
-            '-i', 'input_audio.mp3',
+            '-i', audioInputName,
             '-t', totalDuration.toString(),
             '-c:a', 'aac'
           ];

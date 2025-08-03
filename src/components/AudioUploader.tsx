@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Upload, Music, X, Volume2, Sparkles } from 'lucide-react';
+import { Music, X, Volume2, Sparkles } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { AudioFile, VideoSettings } from '../types';
 
@@ -31,26 +31,75 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('audio/')) {
+    // Accept both audio and video files (iOS may present video files in audio input)
+    const isAudioFile = file.type.startsWith('audio/');
+    const isVideoFile = file.type.startsWith('video/');
+    const hasAudioExtension = /\.(mp3|wav|aac|ogg|m4a|flac)$/i.test(file.name);
+    const hasVideoExtension = /\.(mp4|mov|avi|mkv|webm|3gp)$/i.test(file.name);
+
+    if (!isAudioFile && !isVideoFile && !hasAudioExtension && !hasVideoExtension) {
       alert(t('pleaseSelectAudio'));
       return;
     }
 
     const url = URL.createObjectURL(file);
 
-    // Get audio duration
-    const audio = new Audio();
-    audio.src = url;
+    try {
+      let duration = 0;
 
-    audio.addEventListener('loadedmetadata', () => {
+      if (isVideoFile || hasVideoExtension) {
+        // Handle video files (extract audio duration)
+        const video = document.createElement('video');
+        video.src = url;
+
+        await new Promise<void>((resolve, reject) => {
+          video.addEventListener('loadedmetadata', () => {
+            duration = video.duration;
+            resolve();
+          });
+          video.addEventListener('error', () => {
+            reject(new Error('Could not load video file'));
+          });
+          // Fallback timeout
+          setTimeout(() => reject(new Error('Timeout loading video')), 10000);
+        });
+      } else {
+        // Handle audio files
+        const audio = new Audio();
+        audio.src = url;
+
+        await new Promise<void>((resolve, reject) => {
+          audio.addEventListener('loadedmetadata', () => {
+            duration = audio.duration;
+            resolve();
+          });
+          audio.addEventListener('error', () => {
+            reject(new Error('Could not load audio file'));
+          });
+          // Fallback timeout
+          setTimeout(() => reject(new Error('Timeout loading audio')), 10000);
+        });
+      }
+
       const newAudio: AudioFile = {
         file,
         url,
         name: file.name,
-        duration: audio.duration
+        duration: duration || 30 // Fallback duration if unable to detect
       };
       onAudioChange(newAudio);
-    });
+
+    } catch (error) {
+      console.error('Error loading audio/video file:', error);
+      // Still create the audio file with fallback duration
+      const newAudio: AudioFile = {
+        file,
+        url,
+        name: file.name,
+        duration: 30 // Fallback duration
+      };
+      onAudioChange(newAudio);
+    }
 
     // Reset the input value to ensure the same file can be selected again
     event.target.value = '';
@@ -78,7 +127,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="audio/*"
+        accept="audio/*,video/*,.mp3,.wav,.aac,.ogg,.m4a,.flac,.mp4,.mov,.avi,.mkv,.webm,.3gp"
         onChange={handleFileSelect}
         className="hidden"
       />
