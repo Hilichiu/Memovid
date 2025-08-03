@@ -1,5 +1,9 @@
+// NOTE: Ensure @ffmpeg/core is installed (`npm install @ffmpeg/core`) before using asset imports
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
+// Import FFmpeg core assets via package exports and Vite URL loader
+import coreJsUrl from '@ffmpeg/core?url';
+import coreWasmUrl from '@ffmpeg/core/wasm?url';
 import type { Photo, VideoSettings, CreateVideoParams } from '../types';
 
 class VideoProcessor {
@@ -9,88 +13,165 @@ class VideoProcessor {
 
     const ffmpeg = new FFmpeg();
 
+    // Add logging for debugging
+    ffmpeg.on('log', ({ message }) => {
+      console.log('FFmpeg log:', message);
+    });
+
     // Progress listener: ratio 0 to 1 -> map to 20-80
     ffmpeg.on('progress', ({ progress }: { progress: number }) => {
       onProgress(Math.floor(20 + progress * 60));
     });
 
-    // Load FFmpeg core
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.15/dist/umd';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
-    onProgress(10);
+    try {
+      // Load FFmpeg core from local module assets with fallback options
+      console.log('Loading FFmpeg with core URLs:', { coreJsUrl, coreWasmUrl });
 
-    // Write photos to virtual FS
-    for (let i = 0; i < photos.length; i++) {
-      const data = await fetchFile(photos[i].file);
-      await ffmpeg.writeFile(`photo_${i}.jpg`, data);
-    }
-    onProgress(30);
+      await ffmpeg.load({
+        coreURL: coreJsUrl,
+        wasmURL: coreWasmUrl,
+        // Add workerURL if needed for better compatibility
+      });
 
-    const totalDuration = photos.length * settings.photoDuration;
+      console.log('FFmpeg loaded successfully');
+      onProgress(10);
 
-    // Process audio if provided
-    if (audio) {
-      const audioData = await fetchFile(audio.file);
-      await ffmpeg.writeFile('input_audio.mp3', audioData);
-      if (audio.duration < totalDuration) {
-        const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
-        await ffmpeg.exec([
-          '-stream_loop', loopCount.toString(),
-          '-i', 'input_audio.mp3',
-          '-t', totalDuration.toString(),
-          '-c:a', 'aac',
-          'audio.aac'
-        ]);
-      } else {
-        await ffmpeg.exec([
-          '-i', 'input_audio.mp3',
-          '-t', totalDuration.toString(),
-          '-c:a', 'aac',
-          'audio.aac'
-        ]);
+      // Write photos to virtual FS
+      for (let i = 0; i < photos.length; i++) {
+        const data = await fetchFile(photos[i].file);
+        await ffmpeg.writeFile(`photo_${i}.jpg`, data);
+        console.log(`Written photo_${i}.jpg, size: ${data.length} bytes`);
       }
-      onProgress(50);
-    }
+      onProgress(30);
 
-    // Create filter complex for video
-    const filterComplex = this.buildFilter(photos, settings);
-    onProgress(60);
+      const totalDuration = photos.length * settings.photoDuration;
+      console.log(`Total video duration: ${totalDuration} seconds`);
 
-    // Assemble FFmpeg arguments
-    const args: string[] = [];
-    for (let i = 0; i < photos.length; i++) {
-      args.push('-loop', '1', '-t', settings.photoDuration.toString(), '-i', `photo_${i}.jpg`);
-    }
-    if (audio) {
-      args.push('-i', 'audio.aac');
-    }
-    args.push('-filter_complex', filterComplex, '-map', '[outv]');
-    if (audio) {
-      args.push('-map', `${photos.length}:a`, '-c:a', 'aac');
-    } else {
-      args.push('-an');
-    }
-    args.push(
-      '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '23',
-      '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
-      'output.mp4'
-    );
-    onProgress(70);
+      // Process audio if provided
+      if (audio) {
+        const audioData = await fetchFile(audio.file);
+        await ffmpeg.writeFile('input_audio.mp3', audioData);
+        console.log(`Written audio file, size: ${audioData.length} bytes`);
 
-    // Run encoding
-    await ffmpeg.exec(args);
-    onProgress(90);
+        if (audio.duration < totalDuration) {
+          const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
+          await ffmpeg.exec([
+            '-stream_loop', loopCount.toString(),
+            '-i', 'input_audio.mp3',
+            '-t', totalDuration.toString(),
+            '-c:a', 'aac',
+            'audio.aac'
+          ]);
+        } else {
+          await ffmpeg.exec([
+            '-i', 'input_audio.mp3',
+            '-t', totalDuration.toString(),
+            '-c:a', 'aac',
+            'audio.aac'
+          ]);
+        }
+        onProgress(50);
+      }
 
-    // Read output file and return blob
-    const output = await ffmpeg.readFile('output.mp4');
-    onProgress(100);
-    return new Blob([output], { type: 'video/mp4' });
+      // Create filter complex for video
+      const filterComplex = this.buildFilter(photos, settings);
+      console.log('Filter complex:', filterComplex);
+      onProgress(60);
+
+      // Assemble FFmpeg arguments
+      const args: string[] = [];
+
+      // Add input files
+      for (let i = 0; i < photos.length; i++) {
+        args.push('-loop', '1', '-t', settings.photoDuration.toString(), '-i', `photo_${i}.jpg`);
+      }
+
+      if (audio) {
+        args.push('-i', 'audio.aac');
+      }
+
+      // Add filter complex
+      args.push('-filter_complex', filterComplex);
+
+      // Map video output
+      args.push('-map', '[outv]');
+
+      // Map audio if available
+      if (audio) {
+        args.push('-map', `${photos.length}:a`);
+        args.push('-c:a', 'aac');
+        args.push('-b:a', '128k'); // Add audio bitrate
+      } else {
+        args.push('-an');
+      }
+
+      // Video encoding options
+      args.push(
+        '-c:v', 'libx264',
+        '-preset', 'medium', // Changed from 'fast' to 'medium' for better compatibility
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-r', '30', // Explicit frame rate
+        '-movflags', '+faststart',
+        '-avoid_negative_ts', 'make_zero', // Handle timestamp issues
+        'output.mp4'
+      );
+
+      console.log('FFmpeg command:', args.join(' '));
+      onProgress(70);
+
+      // Run encoding
+      await ffmpeg.exec(args);
+      onProgress(90);
+
+      // Check if output file exists
+      const files = await ffmpeg.listDir('/');
+      console.log('Files in FFmpeg filesystem:', files);
+
+      // Read output file and return blob
+      const output = await ffmpeg.readFile('output.mp4');
+
+      console.log('FFmpeg output type:', typeof output);
+      console.log('FFmpeg output constructor:', output.constructor.name);
+      console.log('FFmpeg output length:', output.length || 'undefined');
+
+      // Ensure output is a Uint8Array and has content
+      if (!output) {
+        throw new Error('Failed to generate video: No output from FFmpeg');
+      }
+
+      // FFmpeg readFile returns Uint8Array, but let's ensure it's the right type
+      const uint8Array = output as Uint8Array;
+
+      if (uint8Array.length === 0) {
+        throw new Error('Failed to generate video: Output file is empty');
+      }
+
+      console.log(`Generated video size: ${uint8Array.length} bytes`);
+
+      // Verify it looks like an MP4 file (should start with specific bytes)
+      const mp4Header = uint8Array.slice(0, 8);
+      console.log('MP4 header bytes:', Array.from(mp4Header).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
+      onProgress(100);
+
+      // Create blob with proper video MIME type
+      const blob = new Blob([uint8Array], { type: 'video/mp4' });
+      console.log('Created blob size:', blob.size);
+
+      return blob;
+
+    } catch (error) {
+      console.error('Error in video processing:', error);
+      throw error;
+    } finally {
+      // Clean up FFmpeg instance
+      try {
+        ffmpeg.terminate();
+      } catch (e) {
+        console.warn('Error terminating FFmpeg:', e);
+      }
+    }
   }
 
   private buildFilter(photos: Photo[], settings: VideoSettings): string {
@@ -98,9 +179,14 @@ class VideoProcessor {
     const fadeDuration = 0.5;
     let filter = '';
 
+    // Validate inputs
+    if (photos.length === 0) {
+      throw new Error('No photos provided for video generation');
+    }
+
     // Scale and prepare each photo stream
     photos.forEach((_, i) => {
-      filter += `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:-1:-1:black,setpts=PTS-STARTPTS,fps=30[v${i}];`;
+      filter += `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30[v${i}];`;
     });
 
     if (!fadeInOut) {
@@ -119,19 +205,21 @@ class VideoProcessor {
       return filter;
     }
 
-    // Fade throughout
-    filter += `[v0]fade=t=in:st=0:d=${fadeDuration}[v0f];`;
-    for (let i = 1; i < photos.length; i++) {
-      if (i === 1) {
-        filter += `[v0f]fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v0ff];`;
-      }
-      filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration}`;
-      if (i < photos.length - 1) {
-        filter += `,fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}`;
-      }
-      filter += `[v${i}f];`;
+    // Single photo case
+    if (photos.length === 1) {
+      filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
+      return filter;
     }
-    const streams = photos.map((_, i) => (i === 0 && photos.length > 1 ? '[v0ff]' : `[v${i}f]`)).join('');
+
+    // Fade throughout (multiple photos)
+    filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
+    for (let i = 1; i < photos.length - 1; i++) {
+      filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
+    }
+    const last = photos.length - 1;
+    filter += `[v${last}]fade=t=in:st=0:d=${fadeDuration}[v${last}f];`;
+
+    const streams = photos.map((_, i) => `[v${i}f]`).join('');
     filter += streams + `concat=n=${photos.length}:v=1:a=0[outv]`;
     return filter;
   }

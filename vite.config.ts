@@ -7,4 +7,20 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
+  server: {
+    // Remove COEP headers for development - they can cause issues with FFmpeg.wasm workers
+    // In production, you may need to configure these properly with your hosting provider
+    fs: {
+      allow: ['..']
+    }
+  },
+  build: {
+    rollupOptions: {
+      external: [],
+    },
+    target: 'esnext',
+  },
+  worker: {
+    format: 'es'
+  }
 });

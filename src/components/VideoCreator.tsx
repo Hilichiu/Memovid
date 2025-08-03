@@ -7,6 +7,8 @@ import VideoControls from './VideoControls';
 import VideoProcessor from './VideoProcessor';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo, AudioFile, VideoSettings } from '../types';
+import { debugVideoCreation } from '../utils/videoDebug';
+import { SimpleVideoTest } from '../utils/simpleVideoTest';
 
 const VideoCreator: React.FC = () => {
   const { t } = useTranslation();
@@ -38,6 +40,12 @@ const VideoCreator: React.FC = () => {
         videoProcessorRef.current = new VideoProcessor();
       }
 
+      console.log('Starting video creation with:', {
+        photoCount: photos.length,
+        hasAudio: !!audioFile,
+        settings
+      });
+
       const videoBlob = await videoProcessorRef.current.createVideo({
         photos,
         audio: audioFile,
@@ -45,11 +53,25 @@ const VideoCreator: React.FC = () => {
         onProgress: setProgress
       });
 
+      console.log('Video blob created:', {
+        size: videoBlob.size,
+        type: videoBlob.type
+      });
+
+      // Debug the blob
+      debugVideoCreation.logBlobInfo(videoBlob, 'Generated video blob');
+
+      if (videoBlob.size === 0) {
+        throw new Error('Generated video is empty (0 bytes)');
+      }
+
       const url = URL.createObjectURL(videoBlob);
       setDownloadUrl(url);
+
+      console.log('Download URL created:', url);
     } catch (error) {
       console.error('Error creating video:', error);
-      alert(t('errorCreatingVideo'));
+      alert(t('errorCreatingVideo') + '\n\nDetails: ' + (error as Error).message);
     } finally {
       setIsProcessing(false);
     }
@@ -149,19 +171,52 @@ const VideoCreator: React.FC = () => {
             </div>
             <div className="p-6">
               {!isProcessing && !downloadUrl && (
-                <button
-                  onClick={handleCreateVideo}
-                  disabled={photos.length === 0}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 text-lg"
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <Play className="w-6 h-6" />
-                    {t('createVideo', {
-                      count: photos.length.toString(),
-                      plural: photos.length !== 1 ? 's' : ''
-                    })}
+                <div className="space-y-3">
+                  <button
+                    onClick={handleCreateVideo}
+                    disabled={photos.length === 0}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 text-lg"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <Play className="w-6 h-6" />
+                      {t('createVideo', {
+                        count: photos.length.toString(),
+                        plural: photos.length !== 1 ? 's' : ''
+                      })}
+                    </div>
+                  </button>
+
+                  {/* Debug test buttons - remove in production */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={async () => {
+                        const testBlob = await debugVideoCreation.createTestVideo();
+                        debugVideoCreation.logBlobInfo(testBlob, 'Test blob');
+                        debugVideoCreation.testBlobDownload(testBlob, 'test-download.mp4');
+                      }}
+                      className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg text-sm"
+                    >
+                      Test Download
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        try {
+                          console.log('Testing simple video creation...');
+                          const simpleVideo = await SimpleVideoTest.createSimpleVideo();
+                          debugVideoCreation.logBlobInfo(simpleVideo, 'Simple video');
+                          debugVideoCreation.testBlobDownload(simpleVideo, 'simple-test.mp4');
+                        } catch (error) {
+                          console.error('Simple video test failed:', error);
+                          alert('Simple video test failed: ' + (error as Error).message);
+                        }
+                      }}
+                      className="bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg text-sm"
+                    >
+                      FFmpeg Test
+                    </button>
                   </div>
-                </button>
+                </div>
               )}
 
               {isProcessing && (
