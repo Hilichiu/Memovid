@@ -6,14 +6,28 @@
 .slider {
   -webkit-appearance: none;
   appearance: none;
-  background: transparent;
+  background: #e5e7eb;
   cursor: pointer;
+  height: 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+}
+
+/* Dark mode slider background */
+.dark .slider {
+  background: #4b5563;
+  border-color: #6b7280;
 }
 
 .slider::-webkit-slider-track {
   background: #e5e7eb;
   height: 8px;
   border-radius: 4px;
+}
+
+/* Dark mode webkit track */
+.dark .slider::-webkit-slider-track {
+  background: #4b5563;
 }
 
 .slider::-webkit-slider-thumb {
@@ -38,6 +52,11 @@
   height: 8px;
   border-radius: 4px;
   border: none;
+}
+
+/* Dark mode firefox track */
+.dark .slider::-moz-range-track {
+  background: #4b5563;
 }
 
 .slider::-moz-range-thumb {

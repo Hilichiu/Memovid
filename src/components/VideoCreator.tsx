@@ -20,7 +20,8 @@ const VideoCreator: React.FC = () => {
   const [settings, setSettings] = useState<VideoSettings>({
     photoDuration: 3,
     fadeInOut: true,
-    fadePosition: 'throughout'
+    fadePosition: 'throughout',
+    audioFadeInOut: true
   });
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
@@ -81,13 +82,6 @@ const VideoCreator: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Subtitle */}
-      <div className="text-center mb-12">
-        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-          {t('subtitle')}
-        </p>
-      </div>
-
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Photo Upload */}
         <div className="space-y-6">

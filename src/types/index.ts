@@ -16,6 +16,7 @@ export interface VideoSettings {
   photoDuration: number;
   fadeInOut: boolean;
   fadePosition: 'throughout' | 'beginning-end';
+  audioFadeInOut: boolean;
 }
 
 export interface CreateVideoParams {

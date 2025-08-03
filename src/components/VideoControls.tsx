@@ -9,10 +9,10 @@ interface VideoControlsProps {
   totalDuration: number;
 }
 
-const VideoControls: React.FC<VideoControlsProps> = ({ 
-  settings, 
-  onSettingsChange, 
-  totalDuration 
+const VideoControls: React.FC<VideoControlsProps> = ({
+  settings,
+  onSettingsChange,
+  totalDuration
 }) => {
   const { t } = useTranslation();
 
@@ -72,7 +72,7 @@ const VideoControls: React.FC<VideoControlsProps> = ({
             {t('fadeEffects')}
           </label>
         </div>
-        
+
         <div className="space-y-3">
           <label className="flex items-center gap-3 cursor-pointer">
             <input
@@ -97,7 +97,7 @@ const VideoControls: React.FC<VideoControlsProps> = ({
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-400">{t('betweenEachPhoto')}</span>
               </label>
-              
+
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="radio"
@@ -111,6 +111,28 @@ const VideoControls: React.FC<VideoControlsProps> = ({
               </label>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Audio Fade Effects */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('audioFadeEffects')}
+          </label>
+        </div>
+
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.audioFadeInOut}
+              onChange={(e) => updateSettings('audioFadeInOut', e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t('enableAudioFadeEffects')}</span>
+          </label>
         </div>
       </div>
     </div>

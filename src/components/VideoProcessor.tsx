@@ -64,20 +64,34 @@ class VideoProcessor {
 
         if (audio.duration < totalDuration) {
           const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
-          await ffmpeg.exec([
+          let audioArgs = [
             '-stream_loop', loopCount.toString(),
             '-i', 'input_audio.mp3',
             '-t', totalDuration.toString(),
-            '-c:a', 'aac',
-            'audio.aac'
-          ]);
+            '-c:a', 'aac'
+          ];
+
+          // Add audio fade effects if enabled
+          if (settings.audioFadeInOut) {
+            audioArgs.splice(-2, 0, '-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+          }
+
+          audioArgs.push('audio.aac');
+          await ffmpeg.exec(audioArgs);
         } else {
-          await ffmpeg.exec([
+          let audioArgs = [
             '-i', 'input_audio.mp3',
             '-t', totalDuration.toString(),
-            '-c:a', 'aac',
-            'audio.aac'
-          ]);
+            '-c:a', 'aac'
+          ];
+
+          // Add audio fade effects if enabled
+          if (settings.audioFadeInOut) {
+            audioArgs.splice(-2, 0, '-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+          }
+
+          audioArgs.push('audio.aac');
+          await ffmpeg.exec(audioArgs);
         }
         onProgress(50);
       }      // Create filter complex for video
@@ -192,9 +206,9 @@ class VideoProcessor {
       throw new Error('No photos provided for video generation');
     }
 
-    // Scale and prepare each photo stream
+    // Scale and prepare each photo stream to 1080p
     photos.forEach((_, i) => {
-      filter += `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30,setsar=1[v${i}];`;
+      filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30,setsar=1[v${i}];`;
     });
 
     if (!fadeInOut) {

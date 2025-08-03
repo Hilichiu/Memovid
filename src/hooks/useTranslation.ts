@@ -9,7 +9,7 @@ interface TranslationContextValue {
 }
 
 const TranslationContext = createContext<TranslationContextValue>({
-  language: 'en',
+  language: 'zh-TW',
   setLanguage: () => { },
   t: (key: string) => key,
 });
@@ -17,7 +17,7 @@ const TranslationContext = createContext<TranslationContextValue>({
 export const TranslationProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('language');
-    return (saved as Language) || 'en';
+    return (saved as Language) || 'zh-TW'; // Default to zh-TW
   });
 
   useEffect(() => {
