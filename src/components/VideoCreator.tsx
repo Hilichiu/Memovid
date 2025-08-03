@@ -8,7 +8,6 @@ import VideoProcessor from './VideoProcessor';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo, AudioFile, VideoSettings } from '../types';
 import { debugVideoCreation } from '../utils/videoDebug';
-import { SimpleVideoTest } from '../utils/simpleVideoTest';
 
 const VideoCreator: React.FC = () => {
   const { t } = useTranslation();
@@ -192,37 +191,6 @@ const VideoCreator: React.FC = () => {
                       })}
                     </div>
                   </button>
-
-                  {/* Debug test buttons - remove in production */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={async () => {
-                        const testBlob = await debugVideoCreation.createTestVideo();
-                        debugVideoCreation.logBlobInfo(testBlob, 'Test blob');
-                        debugVideoCreation.testBlobDownload(testBlob, 'test-download.mp4');
-                      }}
-                      className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg text-sm"
-                    >
-                      Test Download
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        try {
-                          console.log('Testing simple video creation...');
-                          const simpleVideo = await SimpleVideoTest.createSimpleVideo();
-                          debugVideoCreation.logBlobInfo(simpleVideo, 'Simple video');
-                          debugVideoCreation.testBlobDownload(simpleVideo, 'simple-test.mp4');
-                        } catch (error) {
-                          console.error('Simple video test failed:', error);
-                          alert('Simple video test failed: ' + (error as Error).message);
-                        }
-                      }}
-                      className="bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg text-sm"
-                    >
-                      FFmpeg Test
-                    </button>
-                  </div>
                 </div>
               )}
 
