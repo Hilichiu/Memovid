@@ -83,7 +83,7 @@ class VideoProcessor {
             'extracted_audio.aac'
           ]);
           audioInputName = 'extracted_audio.aac';
-          
+
           // Verify audio extraction worked
           const extractedFiles = await ffmpeg.listDir('/');
           const extractedFile = extractedFiles.find(f => f.name === 'extracted_audio.aac');
@@ -112,7 +112,7 @@ class VideoProcessor {
             '-ac', '2',     // Ensure stereo output
             'audio.aac'
           );
-          
+
           await ffmpeg.exec(audioArgs);
         } else {
           let audioArgs = [
@@ -131,10 +131,10 @@ class VideoProcessor {
             '-ac', '2',     // Ensure stereo output
             'audio.aac'
           );
-          
+
           await ffmpeg.exec(audioArgs);
         }
-        
+
         // Verify the audio file was created successfully
         const audioFiles = await ffmpeg.listDir('/');
         const audioFile = audioFiles.find(f => f.name === 'audio.aac');
@@ -142,7 +142,7 @@ class VideoProcessor {
         if (!audioFile) {
           throw new Error('Failed to process audio: audio.aac file was not created');
         }
-        
+
         onProgress(50);
       }      // Create filter complex for video
       const filterComplex = this.buildFilter(photos, settings);
