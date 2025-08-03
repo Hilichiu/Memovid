@@ -1,6 +1,5 @@
 // NOTE: Ensure @ffmpeg/core is installed (`npm install @ffmpeg/core`) before using asset imports
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
 // Import FFmpeg core assets via package exports and Vite URL loader
 import coreJsUrl from '@ffmpeg/core?url';
 import coreWasmUrl from '@ffmpeg/core/wasm?url';
@@ -38,9 +37,14 @@ class VideoProcessor {
 
       // Write photos to virtual FS
       for (let i = 0; i < photos.length; i++) {
-        const data = await fetchFile(photos[i].file);
-        await ffmpeg.writeFile(`photo_${i}.jpg`, data);
-        console.log(`Written photo_${i}.jpg, size: ${data.length} bytes`);
+        console.log(`Processing photo ${i}: ${photos[i].name}, file size: ${photos[i].file.size} bytes`);
+
+        // Use the file directly instead of fetchFile for better reliability
+        const fileData = new Uint8Array(await photos[i].file.arrayBuffer());
+        console.log(`Converted photo ${i} to array buffer: ${fileData.length} bytes`);
+
+        await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
+        console.log(`Written photo_${i}.jpg, size: ${fileData.length} bytes`);
       }
       onProgress(30);
 
@@ -49,7 +53,12 @@ class VideoProcessor {
 
       // Process audio if provided
       if (audio) {
-        const audioData = await fetchFile(audio.file);
+        console.log(`Processing audio: ${audio.name}, file size: ${audio.file.size} bytes`);
+
+        // Use arrayBuffer instead of fetchFile
+        const audioData = new Uint8Array(await audio.file.arrayBuffer());
+        console.log(`Converted audio to array buffer: ${audioData.length} bytes`);
+
         await ffmpeg.writeFile('input_audio.mp3', audioData);
         console.log(`Written audio file, size: ${audioData.length} bytes`);
 
@@ -71,14 +80,12 @@ class VideoProcessor {
           ]);
         }
         onProgress(50);
-      }
-
-      // Create filter complex for video
+      }      // Create filter complex for video
       const filterComplex = this.buildFilter(photos, settings);
       console.log('Filter complex:', filterComplex);
       onProgress(60);
 
-      // Assemble FFmpeg arguments
+      // Assemble FFmpeg arguments with simpler approach
       const args: string[] = [];
 
       // Add input files
@@ -105,35 +112,38 @@ class VideoProcessor {
         args.push('-an');
       }
 
-      // Video encoding options
+      // Video encoding options - simplified for better compatibility
       args.push(
         '-c:v', 'libx264',
-        '-preset', 'medium', // Changed from 'fast' to 'medium' for better compatibility
-        '-crf', '23',
+        '-preset', 'ultrafast', // Use ultrafast for better compatibility
+        '-crf', '28', // Higher CRF for smaller files and faster encoding
         '-pix_fmt', 'yuv420p',
         '-r', '30', // Explicit frame rate
         '-movflags', '+faststart',
-        '-avoid_negative_ts', 'make_zero', // Handle timestamp issues
+        '-shortest', // Stop at shortest input
         'output.mp4'
-      );
-
-      console.log('FFmpeg command:', args.join(' '));
+      ); console.log('FFmpeg command:', args.join(' '));
       onProgress(70);
 
       // Run encoding
       await ffmpeg.exec(args);
       onProgress(90);
 
-      // Check if output file exists
+      // Check if output file exists and has content
       const files = await ffmpeg.listDir('/');
       console.log('Files in FFmpeg filesystem:', files);
+
+      const outputFile = files.find(f => f.name === 'output.mp4');
+      if (!outputFile) {
+        throw new Error('Failed to generate video: output.mp4 file was not created');
+      }
 
       // Read output file and return blob
       const output = await ffmpeg.readFile('output.mp4');
 
       console.log('FFmpeg output type:', typeof output);
       console.log('FFmpeg output constructor:', output.constructor.name);
-      console.log('FFmpeg output length:', output.length || 'undefined');
+      console.log('FFmpeg output length:', (output as Uint8Array).length);
 
       // Ensure output is a Uint8Array and has content
       if (!output) {
@@ -144,10 +154,8 @@ class VideoProcessor {
       const uint8Array = output as Uint8Array;
 
       if (uint8Array.length === 0) {
-        throw new Error('Failed to generate video: Output file is empty');
-      }
-
-      console.log(`Generated video size: ${uint8Array.length} bytes`);
+        throw new Error('Failed to generate video: Output file is empty (0 bytes)');
+      } console.log(`Generated video size: ${uint8Array.length} bytes`);
 
       // Verify it looks like an MP4 file (should start with specific bytes)
       const mp4Header = uint8Array.slice(0, 8);
@@ -186,7 +194,7 @@ class VideoProcessor {
 
     // Scale and prepare each photo stream
     photos.forEach((_, i) => {
-      filter += `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30[v${i}];`;
+      filter += `[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30,setsar=1[v${i}];`;
     });
 
     if (!fadeInOut) {
