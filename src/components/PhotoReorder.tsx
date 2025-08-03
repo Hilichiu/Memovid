@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GripVertical, Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo } from '../types';
@@ -12,11 +12,52 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   const { t } = useTranslation();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [livePhotos, setLivePhotos] = useState<Photo[]>(photos);
+  const [originalPhotos, setOriginalPhotos] = useState<Photo[]>(photos);
   const dragCounter = useRef(0);
+  const touchMoveThreshold = 10; // pixels
 
+  // Update live photos when props change
+  useEffect(() => {
+    if (!isDragging) {
+      setLivePhotos(photos);
+      setOriginalPhotos(photos);
+    }
+  }, [photos, isDragging]);
+
+  useEffect(() => {
+    // Detect if we're on a mobile device
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+  }, []);
+
+  // Helper function to perform live reordering
+  const performLiveReorder = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    
+    const newPhotos = [...livePhotos];
+    const draggedPhoto = newPhotos[fromIndex];
+    
+    // Remove from original position
+    newPhotos.splice(fromIndex, 1);
+    // Insert at new position
+    newPhotos.splice(toIndex, 0, draggedPhoto);
+    
+    setLivePhotos(newPhotos);
+    setDraggedIndex(toIndex); // Update dragged index to new position
+  };
+
+  // Desktop drag handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (isMobile) return;
     setDraggedIndex(index);
-    // show the actual photo under the cursor while dragging
+    setIsDragging(true);
+    setOriginalPhotos([...photos]); // Store original order for potential cancellation
     const img = (e.currentTarget.querySelector('img') as HTMLImageElement);
     if (img) {
       e.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
@@ -25,17 +66,25 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    if (isMobile) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDragEnter = (e: React.DragEvent, index: number) => {
+    if (isMobile) return;
     e.preventDefault();
     dragCounter.current++;
+    
+    // Perform live reordering when dragging over a new item
+    if (draggedIndex !== null && draggedIndex !== index) {
+      performLiveReorder(draggedIndex, index);
+    }
     setDragOverIndex(index);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    if (isMobile) return;
     e.preventDefault();
     dragCounter.current--;
     if (dragCounter.current === 0) {
@@ -43,30 +92,92 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
     }
   };
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent) => {
+    if (isMobile) return;
     e.preventDefault();
     dragCounter.current = 0;
 
-    if (draggedIndex === null) return;
-
-    const newPhotos = [...photos];
-    const draggedPhoto = newPhotos[draggedIndex];
-
-    // Remove the dragged item
-    newPhotos.splice(draggedIndex, 1);
-
-    // Insert at new position
-    newPhotos.splice(dropIndex, 0, draggedPhoto);
-
-    onReorder(newPhotos);
+    // Commit the live reordering to the parent component
+    onReorder(livePhotos);
+    
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setIsDragging(false);
   };
 
   const handleDragEnd = () => {
+    if (isMobile) return;
+    
+    // If drag ended without a drop, revert to original order
+    if (isDragging) {
+      setLivePhotos([...originalPhotos]);
+    }
+    
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setIsDragging(false);
     dragCounter.current = 0;
+  };
+
+  // Mobile touch handlers
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    if (!isMobile) return;
+    
+    const touch = e.touches[0];
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+    setDraggedIndex(index);
+    setIsDragging(false);
+    setOriginalPhotos([...photos]); // Store original order for potential cancellation
+    
+    // Prevent iOS context menu
+    e.preventDefault();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile || !touchStartPos || draggedIndex === null) return;
+    
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPos.x);
+    const deltaY = Math.abs(touch.clientY - touchStartPos.y);
+    
+    // Start dragging if moved beyond threshold
+    if (!isDragging && (deltaX > touchMoveThreshold || deltaY > touchMoveThreshold)) {
+      setIsDragging(true);
+    }
+    
+    if (isDragging) {
+      // Find the element under the touch point
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const photoElement = elementBelow?.closest('[data-photo-index]');
+      
+      if (photoElement) {
+        const index = parseInt(photoElement.getAttribute('data-photo-index') || '0');
+        if (index !== dragOverIndex && index !== draggedIndex) {
+          // Perform live reordering for mobile as well
+          performLiveReorder(draggedIndex, index);
+          setDragOverIndex(index);
+        }
+      }
+    }
+    
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    if (isDragging) {
+      // Commit the live reordering to the parent component
+      onReorder(livePhotos);
+    }
+    
+    // Reset states
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    setTouchStartPos(null);
+    setIsDragging(false);
+    
+    e.preventDefault();
   };
 
   if (photos.length === 0) {
@@ -82,28 +193,41 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
   return (
     <div className="space-y-3">
       <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {t('dragToReorder')}
+        {isMobile ? t('touchToReorder') : t('dragToReorder')}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {photos.map((photo, index) => (
+        {livePhotos.map((photo, index) => (
           <div
             key={photo.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={handleDragOver}
-            onDragEnter={(e) => handleDragEnter(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
+            data-photo-index={index}
+            draggable={!isMobile}
+            onDragStart={!isMobile ? (e) => handleDragStart(e, index) : undefined}
+            onDragOver={!isMobile ? handleDragOver : undefined}
+            onDragEnter={!isMobile ? (e) => handleDragEnter(e, index) : undefined}
+            onDragLeave={!isMobile ? handleDragLeave : undefined}
+            onDrop={!isMobile ? handleDrop : undefined}
+            onDragEnd={!isMobile ? handleDragEnd : undefined}
+            onTouchStart={isMobile ? (e) => handleTouchStart(e, index) : undefined}
+            onTouchMove={isMobile ? handleTouchMove : undefined}
+            onTouchEnd={isMobile ? handleTouchEnd : undefined}
             className={`
-              relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200 cursor-move group
-              ${draggedIndex === index ? 'opacity-50 transform scale-95' : ''}
-              ${dragOverIndex === index && draggedIndex !== index ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'hover:border-gray-300 dark:hover:border-gray-600'}
+              relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg group
+              transition-all duration-300 ease-in-out transform
+              ${isMobile ? 'touch-none select-none' : 'cursor-move'}
+              ${draggedIndex === index ? 'opacity-70 scale-105 z-20 shadow-2xl rotate-2' : 'opacity-100 scale-100'}
+              ${dragOverIndex === index && draggedIndex !== index ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-102' : 'hover:border-gray-300 dark:hover:border-gray-600'}
+              ${isDragging && draggedIndex !== index ? 'transition-transform duration-300' : ''}
             `}
+            style={{
+              transform: isDragging && draggedIndex === index ? 'rotate(5deg)' : undefined,
+            }}
           >
             {/* Drag Handle */}
-            <div className="absolute top-2 left-2 z-10 p-1 bg-black bg-opacity-50 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className={`
+              absolute top-2 left-2 z-10 p-1 bg-black bg-opacity-50 rounded text-white transition-opacity duration-200
+              ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+            `}>
               <GripVertical className="w-3 h-3" />
             </div>
 
@@ -117,7 +241,18 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
               <img
                 src={photo.url}
                 alt={`Photo ${index + 1}`}
-                className="w-full h-full object-cover rounded-lg"
+                className={`
+                  w-full h-full object-cover rounded-lg
+                  ${isMobile ? 'pointer-events-none' : ''}
+                `}
+                style={{
+                  // Prevent iOS context menu
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                }}
+                onContextMenu={(e) => isMobile && e.preventDefault()}
+                draggable={false}
               />
             </div>
 
