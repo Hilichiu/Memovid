@@ -112,7 +112,12 @@ const VideoCreator: React.FC = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400">{t('backgroundMusicDescription')}</p>
             </div>
             <div className="p-6">
-              <AudioUploader audioFile={audioFile} onAudioChange={setAudioFile} />
+              <AudioUploader 
+                audioFile={audioFile} 
+                onAudioChange={setAudioFile}
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
             </div>
           </div>
         </div>

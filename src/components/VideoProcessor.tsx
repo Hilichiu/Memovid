@@ -217,12 +217,18 @@ class VideoProcessor {
     }
 
     if (fadePosition === 'beginning-end' && photos.length > 1) {
+      // First photo: fade in only
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration}[v0f];`;
+      
+      // Middle photos: no fade effects
       for (let i = 1; i < photos.length - 1; i++) {
         filter += `[v${i}]setpts=PTS-STARTPTS[v${i}f];`;
       }
+      
+      // Last photo: fade out to black completely
       const last = photos.length - 1;
       filter += `[v${last}]fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v${last}f];`;
+      
       filter += photos.map((_, i) => `[v${i}f]`).join('') + `concat=n=${photos.length}:v=1:a=0[outv]`;
       return filter;
     }
@@ -234,12 +240,17 @@ class VideoProcessor {
     }
 
     // Fade throughout (multiple photos)
+    // First photo: fade in and fade out
     filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
+    
+    // Middle photos: fade in and fade out
     for (let i = 1; i < photos.length - 1; i++) {
       filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
     }
+    
+    // Last photo: fade in and fade out (to ensure it fades to black at the end)
     const last = photos.length - 1;
-    filter += `[v${last}]fade=t=in:st=0:d=${fadeDuration}[v${last}f];`;
+    filter += `[v${last}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v${last}f];`;
 
     const streams = photos.map((_, i) => `[v${i}f]`).join('');
     filter += streams + `concat=n=${photos.length}:v=1:a=0[outv]`;

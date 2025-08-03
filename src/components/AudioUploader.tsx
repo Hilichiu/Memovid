@@ -1,17 +1,31 @@
 import React, { useRef } from 'react';
-import { Upload, Music, X, Volume2 } from 'lucide-react';
+import { Upload, Music, X, Volume2, Sparkles } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
-import { AudioFile } from '../types';
+import { AudioFile, VideoSettings } from '../types';
 
 interface AudioUploaderProps {
   audioFile: AudioFile | null;
   onAudioChange: (audio: AudioFile | null) => void;
+  settings: VideoSettings;
+  onSettingsChange: (settings: VideoSettings) => void;
 }
 
-const AudioUploader: React.FC<AudioUploaderProps> = ({ audioFile, onAudioChange }) => {
+const AudioUploader: React.FC<AudioUploaderProps> = ({ 
+  audioFile, 
+  onAudioChange, 
+  settings, 
+  onSettingsChange 
+}) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const updateSettings = (key: keyof VideoSettings, value: any) => {
+    onSettingsChange({
+      ...settings,
+      [key]: value
+    });
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -115,6 +129,28 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ audioFile, onAudioChange 
           >
             {t('chooseDifferentFile')}
           </button>
+
+          {/* Audio Fade Effects */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('audioFadeEffects')}
+              </label>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.audioFadeInOut}
+                  onChange={(e) => updateSettings('audioFadeInOut', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('enableAudioFadeEffects')}</span>
+              </label>
+            </div>
+          </div>
         </div>
       )}
     </div>
