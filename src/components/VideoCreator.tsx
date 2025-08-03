@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Image, Download, Play, Settings } from 'lucide-react';
+import { Music, Image, Download, Play, Settings, X } from 'lucide-react';
 import PhotoUploader from './PhotoUploader';
 import AudioUploader from './AudioUploader';
 import PhotoReorder from './PhotoReorder';
@@ -16,6 +16,7 @@ const VideoCreator: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [settings, setSettings] = useState<VideoSettings>({
     photoDuration: 3,
     fadeInOut: true,
@@ -33,43 +34,35 @@ const VideoCreator: React.FC = () => {
     }
   }, [photos, audioFile, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Enhanced download function that saves to Photos on iOS
+  // Enhanced download function with iOS Photos app guidance
   const handleDownload = async () => {
     if (!downloadUrl) return;
 
     // Detect iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    if (isIOS && navigator.share) {
-      try {
-        // Fetch the blob from the URL
-        const response = await fetch(downloadUrl);
-        const blob = await response.blob();
-
-        // Create a File object from the blob
-        const file = new File([blob], 'my-video.mp4', { type: 'video/mp4' });
-
-        // Use Web Share API to save to Photos
-        await navigator.share({
-          files: [file],
-          title: 'My Video',
-          text: 'Video created with Memovid'
-        });
-
-        return;
-      } catch (error) {
-        console.log('Web Share API failed, falling back to download:', error);
-        // Fall through to traditional download
-      }
+    if (isIOS) {
+      // Show instructions modal for iOS users
+      setShowIOSInstructions(true);
+      return;
     }
 
-    // Traditional download for non-iOS or when Web Share API fails
+    // Traditional download for non-iOS
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = 'my-video.mp4';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Function to proceed with iOS download after showing instructions
+  const proceedWithIOSDownload = () => {
+    if (!downloadUrl) return;
+
+    // Open video in new tab for long-press saving
+    window.open(downloadUrl, '_blank');
+    setShowIOSInstructions(false);
   };
 
   // Detect iOS for UI customization
@@ -283,6 +276,52 @@ const VideoCreator: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* iOS Instructions Modal */}
+      {showIOSInstructions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('saveToPhotos')}
+              </h3>
+              <button
+                onClick={() => setShowIOSInstructions(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+              <p className="font-medium">
+                {t('iosInstructions1')}
+              </p>
+
+              <ol className="list-decimal list-inside space-y-2">
+                <li>{t('iosInstructions2')}</li>
+                <li>{t('iosInstructions3')}</li>
+                <li>{t('iosInstructions4')}</li>
+              </ol>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowIOSInstructions(false)}
+                  className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={proceedWithIOSDownload}
+                  className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+                >
+                  {t('openVideo')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
