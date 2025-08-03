@@ -137,8 +137,8 @@ class VideoProcessor {
         '-movflags', '+faststart',
         '-shortest', // Stop at shortest input
         'output.mp4'
-      ); 
-      
+      );
+
       console.log('FFmpeg command:', args.join(' '));
       // Let FFmpeg progress listener handle the progress from here
 
