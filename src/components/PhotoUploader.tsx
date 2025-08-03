@@ -17,7 +17,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
     if (!files) return;
 
     const newPhotos: Photo[] = [];
-    
+
     Array.from(files).forEach((file) => {
       if (file.type.startsWith('image/')) {
         const id = Math.random().toString(36).substr(2, 9);
@@ -53,7 +53,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
         onChange={handleFileSelect}
         className="hidden"
       />
-      
+
       <button
         onClick={openFileDialog}
         className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg p-8 transition-colors duration-200 group"
@@ -74,12 +74,12 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('selectedPhotos', { count: photos.length.toString() })}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto overflow-x-hidden">
             {photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                  <img 
-                    src={photo.url} 
+                  <img
+                    src={photo.url}
                     alt={`Photo ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
