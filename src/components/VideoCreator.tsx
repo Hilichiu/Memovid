@@ -33,6 +33,48 @@ const VideoCreator: React.FC = () => {
     }
   }, [photos, audioFile, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Enhanced download function that saves to Photos on iOS
+  const handleDownload = async () => {
+    if (!downloadUrl) return;
+
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (isIOS && navigator.share) {
+      try {
+        // Fetch the blob from the URL
+        const response = await fetch(downloadUrl);
+        const blob = await response.blob();
+
+        // Create a File object from the blob
+        const file = new File([blob], 'my-video.mp4', { type: 'video/mp4' });
+
+        // Use Web Share API to save to Photos
+        await navigator.share({
+          files: [file],
+          title: 'My Video',
+          text: 'Video created with Memovid'
+        });
+
+        return;
+      } catch (error) {
+        console.log('Web Share API failed, falling back to download:', error);
+        // Fall through to traditional download
+      }
+    }
+
+    // Traditional download for non-iOS or when Web Share API fails
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'my-video.mp4';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Detect iOS for UI customization
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   const handleCreateVideo = async () => {
     if (photos.length === 0) {
       alert(t('pleaseSelectPhotos'));
@@ -224,17 +266,16 @@ const VideoCreator: React.FC = () => {
                     {t('videoReady')}
                   </div>
 
-                  <a
-                    href={downloadUrl}
-                    download="my-video.mp4"
+                  <button
+                    onClick={handleDownload}
                     className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-8 rounded-xl transition-colors duration-200 text-lg"
                   >
                     <Download className="w-6 h-6" />
-                    {t('downloadVideo')}
-                  </a>
+                    {isIOS ? t('downloadVideoIOS') : t('downloadVideo')}
+                  </button>
 
                   <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    {t('downloadDescription')}
+                    {isIOS ? t('downloadDescriptionIOS') : t('downloadDescription')}
                   </div>
                 </div>
               )}
