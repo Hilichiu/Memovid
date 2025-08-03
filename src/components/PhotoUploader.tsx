@@ -21,9 +21,12 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
     setIsProcessing(true);
 
     try {
-      const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'));
+      const fileArray = Array.from(files).filter(file =>
+        file.type.startsWith('image/') || file.type.startsWith('video/')
+      );
 
       if (fileArray.length === 0) {
+        alert('Please select image or video files only.');
         setIsProcessing(false);
         return;
       }
@@ -53,7 +56,9 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
         thumbnailUrl: optimized.thumbnailUrl,
         name: optimized.name,
         width: optimized.width,
-        height: optimized.height
+        height: optimized.height,
+        type: optimized.type,
+        duration: optimized.duration
       }));
 
       onPhotosChange([...photos, ...newPhotos]);
@@ -82,7 +87,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,video/*"
         onChange={handleFileSelect}
         className="hidden"
       />

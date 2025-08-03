@@ -6,6 +6,8 @@ export interface Photo {
   name: string;
   width?: number;
   height?: number;
+  type: 'image' | 'video';
+  duration?: number; // For videos, duration in seconds
 }
 
 export interface AudioFile {

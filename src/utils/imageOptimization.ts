@@ -10,6 +10,8 @@ export interface OptimizedPhoto {
     name: string;
     width?: number;
     height?: number;
+    type: 'image' | 'video';
+    duration?: number;
 }
 
 /**
@@ -64,11 +66,76 @@ export function createThumbnail(file: File, maxSize: number = 400): Promise<stri
 }
 
 /**
- * Creates optimized photo objects with thumbnails for video processing
+ * Creates a thumbnail from a video file at a specific time
+ */
+export function createVideoThumbnail(file: File, maxSize: number = 400, seekTime: number = 1): Promise<{ thumbnailUrl: string, duration: number }> {
+    return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        video.onloadeddata = () => {
+            // Set seek time, but not beyond video duration
+            const seekTo = Math.min(seekTime, video.duration / 2);
+            video.currentTime = seekTo;
+        };
+
+        video.onseeked = () => {
+            try {
+                // Calculate thumbnail dimensions
+                let { videoWidth: width, videoHeight: height } = video;
+                const scale = Math.min(maxSize / width, maxSize / height);
+
+                width *= scale;
+                height *= scale;
+
+                // Set canvas size
+                canvas.width = width;
+                canvas.height = height;
+
+                // Draw video frame to canvas
+                if (ctx) {
+                    ctx.drawImage(video, 0, 0, width, height);
+
+                    // Convert to blob with compression
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                const thumbnailUrl = URL.createObjectURL(blob);
+                                resolve({ thumbnailUrl, duration: video.duration });
+                            } else {
+                                reject(new Error('Failed to create video thumbnail'));
+                            }
+                        },
+                        'image/jpeg',
+                        0.8
+                    );
+                } else {
+                    reject(new Error('Canvas context not available'));
+                }
+
+                // Clean up
+                URL.revokeObjectURL(video.src);
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        video.onerror = () => reject(new Error('Failed to load video for thumbnail'));
+        video.src = URL.createObjectURL(file);
+        video.load();
+    });
+}
+
+/**
+ * Creates optimized photo/video objects with thumbnails for video processing
  */
 export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPhoto[]> {
     const promises = files.map(async (file) => {
-        if (!file.type.startsWith('image/')) {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+
+        if (!isImage && !isVideo) {
             throw new Error(`Invalid file type: ${file.type}`);
         }
 
@@ -76,15 +143,29 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
         const url = URL.createObjectURL(file);
 
         try {
-            const thumbnailUrl = await createThumbnail(file, 400);
-
-            return {
-                id,
-                file,
-                url,
-                thumbnailUrl,
-                name: file.name
-            };
+            if (isImage) {
+                const thumbnailUrl = await createThumbnail(file, 400);
+                return {
+                    id,
+                    file,
+                    url,
+                    thumbnailUrl,
+                    name: file.name,
+                    type: 'image' as const
+                };
+            } else {
+                // Video file
+                const { thumbnailUrl, duration } = await createVideoThumbnail(file, 400);
+                return {
+                    id,
+                    file,
+                    url,
+                    thumbnailUrl,
+                    name: file.name,
+                    type: 'video' as const,
+                    duration
+                };
+            }
         } catch (error) {
             // If thumbnail creation fails, use original as fallback
             console.warn('Thumbnail creation failed for', file.name, error);
@@ -93,7 +174,9 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
                 file,
                 url,
                 thumbnailUrl: url,
-                name: file.name
+                name: file.name,
+                type: isImage ? 'image' as const : 'video' as const,
+                duration: isVideo ? undefined : undefined
             };
         }
     });

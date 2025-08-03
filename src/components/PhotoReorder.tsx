@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GripVertical, Image as ImageIcon } from 'lucide-react';
+import { GripVertical, Image as ImageIcon, Play } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { Photo } from '../types';
 
@@ -291,6 +291,22 @@ const PhotoReorder: React.FC<PhotoReorderProps> = ({ photos, onReorder }) => {
             <div className="absolute top-2 right-2 z-10 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
               #{index + 1}
             </div>
+
+            {/* Video Indicator */}
+            {photo.type === 'video' && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <div className="bg-black bg-opacity-60 rounded-full p-3">
+                  <Play className="w-6 h-6 text-white fill-white" />
+                </div>
+              </div>
+            )}
+
+            {/* Duration Badge for Videos */}
+            {photo.type === 'video' && photo.duration && (
+              <div className="absolute bottom-2 right-2 z-10 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                {Math.round(photo.duration)}s
+              </div>
+            )}
 
             {/* Photo */}
             <div className="aspect-square w-full">

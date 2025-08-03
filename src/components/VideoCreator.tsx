@@ -196,7 +196,14 @@ const VideoCreator: React.FC = () => {
     }
   };
 
-  const totalDuration = photos.length * settings.photoDuration;
+  // Calculate total duration considering both photos and videos
+  const totalDuration = photos.reduce((total, media) => {
+    if (media.type === 'video' && media.duration) {
+      return total + media.duration;
+    } else {
+      return total + settings.photoDuration;
+    }
+  }, 0);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">

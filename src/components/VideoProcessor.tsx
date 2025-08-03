@@ -37,28 +37,45 @@ class VideoProcessor {
       console.log('FFmpeg loaded successfully');
       onProgress(10);
 
-      // Write optimized photos to virtual FS for faster processing
+      // Write optimized photos/videos to virtual FS for faster processing
       for (let i = 0; i < photos.length; i++) {
-        console.log(`Processing photo ${i}: ${photos[i].name}, file size: ${photos[i].file.size} bytes`);
+        const media = photos[i];
+        console.log(`Processing ${media.type} ${i}: ${media.name}, file size: ${media.file.size} bytes`);
 
         try {
-          // Optimize image for video processing to reduce FFmpeg load
-          const optimizedBlob = await createVideoOptimizedImage(photos[i].file, 1920);
-          const fileData = new Uint8Array(await optimizedBlob.arrayBuffer());
-          console.log(`Optimized photo ${i}: ${fileData.length} bytes (was ${photos[i].file.size})`);
+          if (media.type === 'image') {
+            // Optimize image for video processing to reduce FFmpeg load
+            const optimizedBlob = await createVideoOptimizedImage(media.file, 1920);
+            const fileData = new Uint8Array(await optimizedBlob.arrayBuffer());
+            console.log(`Optimized photo ${i}: ${fileData.length} bytes (was ${media.file.size})`);
 
-          await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
-          console.log(`Written optimized photo_${i}.jpg, size: ${fileData.length} bytes`);
+            await ffmpeg.writeFile(`media_${i}.jpg`, fileData);
+            console.log(`Written optimized media_${i}.jpg, size: ${fileData.length} bytes`);
+          } else {
+            // Handle video file - write directly without optimization for now
+            const fileData = new Uint8Array(await media.file.arrayBuffer());
+            const extension = media.file.name.split('.').pop()?.toLowerCase() || 'mp4';
+            await ffmpeg.writeFile(`media_${i}.${extension}`, fileData);
+            console.log(`Written video media_${i}.${extension}, size: ${fileData.length} bytes`);
+          }
         } catch (error) {
           // Fallback to original file if optimization fails
-          console.warn(`Optimization failed for photo ${i}, using original:`, error);
-          const fileData = new Uint8Array(await photos[i].file.arrayBuffer());
-          await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
+          console.warn(`Processing failed for ${media.type} ${i}, using original:`, error);
+          const fileData = new Uint8Array(await media.file.arrayBuffer());
+          const extension = media.type === 'image' ? 'jpg' : (media.file.name.split('.').pop()?.toLowerCase() || 'mp4');
+          await ffmpeg.writeFile(`media_${i}.${extension}`, fileData);
         }
       }
       onProgress(30);
 
-      const totalDuration = photos.length * settings.photoDuration;
+      // Calculate total duration considering both photos and videos
+      const totalDuration = photos.reduce((total, media) => {
+        if (media.type === 'video' && media.duration) {
+          return total + media.duration;
+        } else {
+          return total + settings.photoDuration;
+        }
+      }, 0);
       console.log(`Total video duration: ${totalDuration} seconds`);
 
       // Process audio if provided
@@ -164,9 +181,16 @@ class VideoProcessor {
       // Assemble FFmpeg arguments with simpler approach
       const args: string[] = [];
 
-      // Add input files
+      // Add input files - handle both images and videos with correct durations
       for (let i = 0; i < photos.length; i++) {
-        args.push('-loop', '1', '-t', settings.photoDuration.toString(), '-i', `photo_${i}.jpg`);
+        const media = photos[i];
+        if (media.type === 'image') {
+          args.push('-loop', '1', '-t', settings.photoDuration.toString(), '-i', `media_${i}.jpg`);
+        } else {
+          // For video files, use their full duration (no clipping)
+          const extension = media.file.name.split('.').pop()?.toLowerCase() || 'mp4';
+          args.push('-i', `media_${i}.${extension}`);
+        }
       }
 
       if (audio) {
@@ -269,13 +293,29 @@ class VideoProcessor {
 
     // Validate inputs
     if (photos.length === 0) {
-      throw new Error('No photos provided for video generation');
+      throw new Error('No media provided for video generation');
     }
 
-    // Scale and prepare each photo stream to 1080p with optimization
-    photos.forEach((_, i) => {
-      filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=24,setsar=1[v${i}];`;
+    // Scale and prepare each media stream (photos/videos) to 1080p with optimization
+    // Handle different durations for images vs videos
+    photos.forEach((media, i) => {
+      if (media.type === 'image') {
+        // Images use photoDuration and need setpts for timing
+        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=24,setsar=1[v${i}];`;
+      } else {
+        // Videos use their natural duration and timing
+        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=24,setsar=1[v${i}];`;
+      }
     });
+
+    // Calculate total duration for fade timing
+    const totalVideoDuration = photos.reduce((total, media) => {
+      if (media.type === 'video' && media.duration) {
+        return total + media.duration;
+      } else {
+        return total + photoDuration;
+      }
+    }, 0);
 
     if (!fadeInOut) {
       filter += photos.map((_, i) => `[v${i}]`).join('') + `concat=n=${photos.length}:v=1:a=0[outv]`;
@@ -297,33 +337,44 @@ class VideoProcessor {
 
       // Concat all photos first, then apply final fade out to black
       filter += photos.map((_, i) => `[v${i}f]`).join('') + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
-      filter += `[concat_out]fade=t=out:st=${(photos.length * photoDuration) - fadeDuration}:d=${fadeDuration}[outv]`;
+      filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
       return filter;
     }
 
-    // Single photo case
+    // Single media case
     if (photos.length === 1) {
-      filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
+      const media = photos[0];
+      const mediaDuration = media.type === 'video' && media.duration ? media.duration : photoDuration;
+      filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
       return filter;
     }
 
-    // Fade throughout (multiple photos)
-    // First photo: fade in and fade out
-    filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
+    // Fade throughout (multiple media)
+    // Handle individual fade timings for mixed media
+    let currentTime = 0;
+    
+    // First media: fade in and fade out
+    const firstMedia = photos[0];
+    const firstDuration = firstMedia.type === 'video' && firstMedia.duration ? firstMedia.duration : photoDuration;
+    filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${firstDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
+    currentTime += firstDuration;
 
-    // Middle photos: fade in and fade out
+    // Middle media: fade in and fade out
     for (let i = 1; i < photos.length - 1; i++) {
-      filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${photoDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
+      const media = photos[i];
+      const mediaDuration = media.type === 'video' && media.duration ? media.duration : photoDuration;
+      filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
+      currentTime += mediaDuration;
     }
 
-    // Last photo: fade in only (we'll add final fade out after concat)
+    // Last media: fade in only (we'll add final fade out after concat)
     const last = photos.length - 1;
     filter += `[v${last}]fade=t=in:st=0:d=${fadeDuration}[v${last}f];`;
 
-    // Concat all photos first, then apply final fade out to black
+    // Concat all media first, then apply final fade out to black
     const streams = photos.map((_, i) => `[v${i}f]`).join('');
     filter += streams + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
-    filter += `[concat_out]fade=t=out:st=${(photos.length * photoDuration) - fadeDuration}:d=${fadeDuration}[outv]`;
+    filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
     return filter;
   }
 }
