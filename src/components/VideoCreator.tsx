@@ -17,6 +17,7 @@ const VideoCreator: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [settings, setSettings] = useState<VideoSettings>({
     photoDuration: 3,
     fadeInOut: true,
@@ -37,9 +38,6 @@ const VideoCreator: React.FC = () => {
   // Enhanced download function with iOS Photos app guidance
   const handleDownload = async () => {
     if (!downloadUrl) return;
-
-    // Detect iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     if (isIOS) {
       // Show instructions modal for iOS users
@@ -65,8 +63,15 @@ const VideoCreator: React.FC = () => {
     setShowIOSInstructions(false);
   };
 
-  // Detect iOS for UI customization
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // Better iOS detection using the same strategy as PhotoReorder
+  useEffect(() => {
+    const checkIOS = () => {
+      const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+      setIsIOS(isIOSDevice);
+    };
+    checkIOS();
+  }, []);
 
   const handleCreateVideo = async () => {
     if (photos.length === 0) {
