@@ -4,6 +4,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import coreJsUrl from '@ffmpeg/core?url';
 import coreWasmUrl from '@ffmpeg/core/wasm?url';
 import type { Photo, VideoSettings, CreateVideoParams } from '../types';
+import { createVideoOptimizedImage } from '../utils/imageOptimization';
 
 class VideoProcessor {
   async createVideo(params: CreateVideoParams): Promise<Blob> {
@@ -36,16 +37,24 @@ class VideoProcessor {
       console.log('FFmpeg loaded successfully');
       onProgress(10);
 
-      // Write photos to virtual FS
+      // Write optimized photos to virtual FS for faster processing
       for (let i = 0; i < photos.length; i++) {
         console.log(`Processing photo ${i}: ${photos[i].name}, file size: ${photos[i].file.size} bytes`);
 
-        // Use the file directly instead of fetchFile for better reliability
-        const fileData = new Uint8Array(await photos[i].file.arrayBuffer());
-        console.log(`Converted photo ${i} to array buffer: ${fileData.length} bytes`);
+        try {
+          // Optimize image for video processing to reduce FFmpeg load
+          const optimizedBlob = await createVideoOptimizedImage(photos[i].file, 1920);
+          const fileData = new Uint8Array(await optimizedBlob.arrayBuffer());
+          console.log(`Optimized photo ${i}: ${fileData.length} bytes (was ${photos[i].file.size})`);
 
-        await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
-        console.log(`Written photo_${i}.jpg, size: ${fileData.length} bytes`);
+          await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
+          console.log(`Written optimized photo_${i}.jpg, size: ${fileData.length} bytes`);
+        } catch (error) {
+          // Fallback to original file if optimization fails
+          console.warn(`Optimization failed for photo ${i}, using original:`, error);
+          const fileData = new Uint8Array(await photos[i].file.arrayBuffer());
+          await ffmpeg.writeFile(`photo_${i}.jpg`, fileData);
+        }
       }
       onProgress(30);
 
@@ -72,14 +81,15 @@ class VideoProcessor {
         let audioInputName = inputFileName;
         if (isVideoFile) {
           console.log('Extracting audio from video file...');
-          // Convert to AAC format instead of trying to copy PCM to ADTS
+          // Optimized audio extraction with faster settings
           await ffmpeg.exec([
             '-i', inputFileName,
             '-vn', // No video
             '-acodec', 'aac',
-            '-ar', '48000', // Set sample rate
+            '-ar', '44100', // Standard sample rate (was 48000)
             '-ac', '2', // Set to stereo
-            '-b:a', '128k', // Set bitrate
+            '-b:a', '96k', // Lower bitrate for faster processing (was 128k)
+            '-threads', '0', // Use all available threads
             'extracted_audio.aac'
           ]);
           audioInputName = 'extracted_audio.aac';
@@ -108,8 +118,9 @@ class VideoProcessor {
 
           audioArgs.push(
             '-c:a', 'aac',
-            '-ar', '48000', // Ensure consistent sample rate
+            '-ar', '44100', // Match optimized sample rate
             '-ac', '2',     // Ensure stereo output
+            '-b:a', '96k',  // Optimized bitrate for speed
             'audio.aac'
           );
 
@@ -127,8 +138,9 @@ class VideoProcessor {
 
           audioArgs.push(
             '-c:a', 'aac',
-            '-ar', '48000', // Ensure consistent sample rate
+            '-ar', '44100', // Match optimized sample rate
             '-ac', '2',     // Ensure stereo output
+            '-b:a', '96k',  // Optimized bitrate for speed
             'audio.aac'
           );
 
@@ -171,20 +183,22 @@ class VideoProcessor {
       if (audio) {
         args.push('-map', `${photos.length}:a`);
         args.push('-c:a', 'aac');
-        args.push('-b:a', '128k'); // Add audio bitrate
+        args.push('-b:a', '96k'); // Optimized audio bitrate for speed
       } else {
         args.push('-an');
       }
 
-      // Video encoding options - simplified for better compatibility
+      // Video encoding options - optimized for speed
       args.push(
         '-c:v', 'libx264',
-        '-preset', 'ultrafast', // Use ultrafast for better compatibility
-        '-crf', '28', // Higher CRF for smaller files and faster encoding
+        '-preset', 'ultrafast', // Fastest encoding preset
+        '-tune', 'fastdecode',   // Optimize for fast decoding
+        '-crf', '23',            // Better quality with reasonable speed
         '-pix_fmt', 'yuv420p',
-        '-r', '30', // Explicit frame rate
+        '-r', '24',              // Lower frame rate for faster processing
+        '-threads', '0',         // Use all available CPU threads
         '-movflags', '+faststart',
-        '-shortest', // Stop at shortest input
+        '-shortest',             // Stop at shortest input
         'output.mp4'
       );
 
@@ -258,9 +272,9 @@ class VideoProcessor {
       throw new Error('No photos provided for video generation');
     }
 
-    // Scale and prepare each photo stream to 1080p
+    // Scale and prepare each photo stream to 1080p with optimization
     photos.forEach((_, i) => {
-      filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=30,setsar=1[v${i}];`;
+      filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=24,setsar=1[v${i}];`;
     });
 
     if (!fadeInOut) {

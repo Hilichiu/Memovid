@@ -15,7 +15,7 @@ export interface OptimizedPhoto {
 /**
  * Creates a thumbnail version of an image file
  */
-export function createThumbnail(file: File, maxSize: number = 200): Promise<string> {
+export function createThumbnail(file: File, maxSize: number = 400): Promise<string> {
     return new Promise((resolve, reject) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -48,7 +48,7 @@ export function createThumbnail(file: File, maxSize: number = 200): Promise<stri
                         }
                     },
                     'image/jpeg',
-                    0.7 // 70% quality for good balance
+                    0.8 // 80% quality for better visual quality
                 );
             } else {
                 reject(new Error('Canvas context not available'));
@@ -64,7 +64,7 @@ export function createThumbnail(file: File, maxSize: number = 200): Promise<stri
 }
 
 /**
- * Creates optimized photo objects with thumbnails
+ * Creates optimized photo objects with thumbnails for video processing
  */
 export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPhoto[]> {
     const promises = files.map(async (file) => {
@@ -76,7 +76,7 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
         const url = URL.createObjectURL(file);
 
         try {
-            const thumbnailUrl = await createThumbnail(file, 200);
+            const thumbnailUrl = await createThumbnail(file, 400);
 
             return {
                 id,
@@ -99,6 +99,59 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
     });
 
     return Promise.all(promises);
+}
+
+/**
+ * Creates optimized images for video processing - reduces file sizes before FFmpeg
+ */
+export async function createVideoOptimizedImage(file: File, maxSize: number = 1920): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        img.onload = () => {
+            // Calculate dimensions for video processing
+            let { width, height } = img;
+
+            // Only resize if image is larger than maxSize
+            if (width > maxSize || height > maxSize) {
+                const scale = Math.min(maxSize / width, maxSize / height);
+                width *= scale;
+                height *= scale;
+            }
+
+            // Set canvas size
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw and compress for video processing
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to blob with optimization for video
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Failed to optimize image for video'));
+                        }
+                    },
+                    'image/jpeg',
+                    0.85 // 85% quality for video processing balance
+                );
+            } else {
+                reject(new Error('Canvas context not available'));
+            }
+
+            // Clean up
+            URL.revokeObjectURL(img.src);
+        };
+
+        img.onerror = () => reject(new Error('Failed to load image for optimization'));
+        img.src = URL.createObjectURL(file);
+    });
 }
 
 /**
