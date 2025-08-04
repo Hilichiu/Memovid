@@ -17,7 +17,7 @@ const TranslationContext = createContext<TranslationContextValue>({
 export const TranslationProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('language');
-    return (saved as Language) || 'zh-TW'; // Default to zh-TW
+    return (saved as Language) || 'en'; // Default to English
   });
 
   useEffect(() => {

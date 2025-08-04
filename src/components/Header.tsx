@@ -33,7 +33,7 @@ const Header: React.FC = () => {
               title={language === 'en' ? 'Switch to 繁體中文' : 'Switch to English'}
             >
               <Languages className="w-4 h-4" />
-              <span>{language === 'en' ? '中文' : 'EN'}</span>
+              <span>{language === 'en' ? '繁中' : 'EN'}</span>
             </button>
 
             {/* Theme Toggle */}
