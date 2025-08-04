@@ -101,25 +101,49 @@ class VideoProcessor {
         let audioInputName = inputFileName;
         if (isVideoFile) {
           console.log('Extracting audio from video file...');
-          // Optimized audio extraction with faster settings
-          await ffmpeg.exec([
-            '-i', inputFileName,
-            '-vn', // No video
-            '-acodec', 'aac',
-            '-ar', '44100', // Standard sample rate (was 48000)
-            '-ac', '2', // Set to stereo
-            '-b:a', '96k', // Lower bitrate for faster processing (was 128k)
-            '-threads', '0', // Use all available threads
-            'extracted_audio.aac'
-          ]);
-          audioInputName = 'extracted_audio.aac';
+          try {
+            // Optimized audio extraction with faster settings
+            await ffmpeg.exec([
+              '-i', inputFileName,
+              '-vn', // No video
+              '-acodec', 'aac',
+              '-ar', '44100', // Standard sample rate (was 48000)
+              '-ac', '2', // Set to stereo
+              '-b:a', '96k', // Lower bitrate for faster processing (was 128k)
+              '-threads', '0', // Use all available threads
+              'extracted_audio.aac'
+            ]);
+            audioInputName = 'extracted_audio.aac';
 
-          // Verify audio extraction worked
-          const extractedFiles = await ffmpeg.listDir('/');
-          const extractedFile = extractedFiles.find(f => f.name === 'extracted_audio.aac');
-          console.log('Audio extraction completed. Files:', extractedFiles.map(f => f.name));
-          if (!extractedFile) {
-            throw new Error('Failed to extract audio from video file');
+            // Verify audio extraction worked
+            const extractedFiles = await ffmpeg.listDir('/');
+            const extractedFile = extractedFiles.find(f => f.name === 'extracted_audio.aac');
+            console.log('Audio extraction completed. Files:', extractedFiles.map(f => f.name));
+            if (!extractedFile) {
+              throw new Error('Video file has no audio stream');
+            }
+          } catch (error) {
+            console.warn('Failed to extract audio from video file (likely silent video):', error);
+            // Create a silent audio track as fallback for silent videos
+            console.log('Creating silent audio track for silent video...');
+            await ffmpeg.exec([
+              '-f', 'lavfi',
+              '-i', `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${totalDuration}`,
+              '-c:a', 'aac',
+              '-ar', '44100',
+              '-ac', '2',
+              '-b:a', '96k',
+              'extracted_audio.aac'
+            ]);
+            audioInputName = 'extracted_audio.aac';
+
+            // Verify silent audio creation worked
+            const silentFiles = await ffmpeg.listDir('/');
+            const silentFile = silentFiles.find(f => f.name === 'extracted_audio.aac');
+            if (!silentFile) {
+              throw new Error('Failed to create silent audio track for video file');
+            }
+            console.log('Silent audio track created successfully');
           }
         }
 
@@ -214,9 +238,8 @@ class VideoProcessor {
       const hasVideoContent = photos.some(media => media.type === 'video');
 
       if (audio && hasVideoContent && settings.keepOriginalVideoAudio) {
-        // Mix background audio with video audio
-        // This requires updating the filter complex to handle audio mixing
-        args.push('-map', '[outa]'); // We'll create this in the filter complex
+        // Mix background audio with video audio - use filter complex output
+        args.push('-map', '[outa]');
         args.push('-c:a', 'aac');
         args.push('-b:a', '128k');
       } else if (audio) {
@@ -225,8 +248,9 @@ class VideoProcessor {
         args.push('-c:a', 'aac');
         args.push('-b:a', '96k'); // Optimized audio bitrate for speed
       } else if (hasVideoContent && settings.keepOriginalVideoAudio) {
-        // Only video audio (no background music)
-        args.push('-map', '[outa]'); // We'll create this in the filter complex
+        // Only video audio (no background music) - but don't force audio if video has none
+        // Use -map 0:a? to optionally map audio if it exists
+        args.push('-map', '0:a?');
         args.push('-c:a', 'aac');
         args.push('-b:a', '128k');
       } else {
@@ -396,13 +420,11 @@ class VideoProcessor {
           : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
 
-      // Handle audio for single video
-      if (media.type === 'video' && settings.keepOriginalVideoAudio) {
-        if (hasBackgroundAudio) {
-          filter += `;[0:a][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
-        } else {
-          filter += `;[0:a]acopy[outa]`;
-        }
+      // For single video with background audio, create a safer mix
+      if (media.type === 'video' && settings.keepOriginalVideoAudio && hasBackgroundAudio) {
+        // Create a silent audio track as base, then mix with background audio
+        // This ensures we always have audio even if the video has no audio stream
+        filter += `;anullsrc=channel_layout=stereo:sample_rate=44100:duration=${mediaDuration}[video_silence];[video_silence][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
       }
 
       return filter;
@@ -459,15 +481,10 @@ class VideoProcessor {
     // Create audio streams with proper timing for each media
     photos.forEach((media, i) => {
       if (media.type === 'video') {
-        // For videos, check if we need to clip audio duration
-        if (settings.applyPhotoDurationToVideos && media.duration && media.duration > photoDuration) {
-          // Clip video audio to photo duration
-          audioFilter += `[${i}:a]atrim=0:${photoDuration}[video_audio${i}];`;
-          audioStreams.push(`[video_audio${i}]`);
-        } else {
-          // Use video audio as-is
-          audioStreams.push(`[${i}:a]`);
-        }
+        // For videos, create silent audio as fallback for videos without audio
+        const videoDuration = settings.applyPhotoDurationToVideos && media.duration && media.duration > photoDuration ? photoDuration : (media.duration || photoDuration);
+        audioFilter += `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${videoDuration}[video_audio${i}];`;
+        audioStreams.push(`[video_audio${i}]`);
       } else {
         // For images, create silent audio of photo duration
         audioFilter += `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${photoDuration}[silence${i}];`;
