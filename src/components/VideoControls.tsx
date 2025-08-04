@@ -118,24 +118,24 @@ const VideoControls: React.FC<VideoControlsProps> = ({
                 <input
                   type="radio"
                   name="fadePosition"
-                  value="beginning-end"
-                  checked={settings.fadePosition === 'beginning-end'}
-                  onChange={(e) => updateSettings('fadePosition', e.target.value)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('onlyAtBeginningEnd')}</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="fadePosition"
                   value="throughout"
                   checked={settings.fadePosition === 'throughout'}
                   onChange={(e) => updateSettings('fadePosition', e.target.value)}
                   className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-400">{t('betweenEachPhoto')}</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="fadePosition"
+                  value="beginning-end"
+                  checked={settings.fadePosition === 'beginning-end'}
+                  onChange={(e) => updateSettings('fadePosition', e.target.value)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('onlyAtBeginningEnd')}</span>
               </label>
             </div>
           )}

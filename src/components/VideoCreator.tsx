@@ -35,7 +35,7 @@ const VideoCreator: React.FC = () => {
   const [settings, setSettings] = useState<VideoSettings>({
     photoDuration: 3,
     fadeInOut: true,
-    fadePosition: 'beginning-end',
+    fadePosition: 'throughout',
     audioFadeInOut: true,
     applyPhotoDurationToVideos: false,
     keepOriginalVideoAudio: true
