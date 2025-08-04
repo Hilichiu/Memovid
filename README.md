@@ -7,6 +7,10 @@ A powerful, modern web application that transforms your photos and videos into s
 ![Vite](https://img.shields.io/badge/Vite-5.4.2-purple)
 ![FFmpeg.wasm](https://img.shields.io/badge/FFmpeg.wasm-0.12.15-red)
 
+<img width="1624" height="1060" alt="Screenshot 2025-08-04 at 16 31 53" src="https://github.com/user-attachments/assets/c5d23063-1388-4755-85e7-233ae01a63c3" />
+
+
+
 ## ✨ Features
 
 ### 🎬 Advanced Mixed Media Support
