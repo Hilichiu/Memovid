@@ -201,8 +201,14 @@ const VideoCreator: React.FC = () => {
   // Calculate total duration considering both photos and videos
   const totalDuration = photos.reduce((total, media) => {
     if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
+      // Use full video duration when not applying photo duration
       return total + media.duration;
+    } else if (media.type === 'video' && media.duration && settings.applyPhotoDurationToVideos) {
+      // When applying photo duration to videos, use the minimum of video duration and photo duration
+      // This ensures short videos don't get counted as longer than they actually are
+      return total + Math.min(media.duration, settings.photoDuration);
     } else {
+      // For photos, always use photo duration
       return total + settings.photoDuration;
     }
   }, 0);

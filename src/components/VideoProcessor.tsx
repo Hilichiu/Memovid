@@ -72,6 +72,9 @@ class VideoProcessor {
       const totalDuration = photos.reduce((total, media) => {
         if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
           return total + media.duration;
+        } else if (media.type === 'video' && media.duration && settings.applyPhotoDurationToVideos) {
+          // When applying photo duration to videos, use the minimum of video duration and photo duration
+          return total + Math.min(media.duration, settings.photoDuration);
         } else {
           return total + settings.photoDuration;
         }
@@ -337,6 +340,9 @@ class VideoProcessor {
     const totalVideoDuration = photos.reduce((total, media) => {
       if (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) {
         return total + media.duration;
+      } else if (media.type === 'video' && media.duration && settings.applyPhotoDurationToVideos) {
+        // When applying photo duration to videos, use the minimum of video duration and photo duration
+        return total + Math.min(media.duration, photoDuration);
       } else {
         return total + photoDuration;
       }
@@ -410,7 +416,11 @@ class VideoProcessor {
     // Single media case
     if (photos.length === 1) {
       const media = photos[0];
-      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
+      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos)
+        ? media.duration
+        : (media.type === 'video' && media.duration && settings.applyPhotoDurationToVideos)
+          ? Math.min(media.duration, photoDuration)
+          : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
 
       // Handle audio for single video
@@ -431,14 +441,22 @@ class VideoProcessor {
 
     // First media: fade in and fade out
     const firstMedia = photos[0];
-    const firstDuration = (firstMedia.type === 'video' && firstMedia.duration && !settings.applyPhotoDurationToVideos) ? firstMedia.duration : photoDuration;
+    const firstDuration = (firstMedia.type === 'video' && firstMedia.duration && !settings.applyPhotoDurationToVideos)
+      ? firstMedia.duration
+      : (firstMedia.type === 'video' && firstMedia.duration && settings.applyPhotoDurationToVideos)
+        ? Math.min(firstMedia.duration, photoDuration)
+        : photoDuration;
     filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${firstDuration - fadeDuration}:d=${fadeDuration}[v0f];`;
     currentTime += firstDuration;
 
     // Middle media: fade in and fade out
     for (let i = 1; i < photos.length - 1; i++) {
       const media = photos[i];
-      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
+      const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos)
+        ? media.duration
+        : (media.type === 'video' && media.duration && settings.applyPhotoDurationToVideos)
+          ? Math.min(media.duration, photoDuration)
+          : photoDuration;
       filter += `[v${i}]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[v${i}f];`;
       currentTime += mediaDuration;
     }
