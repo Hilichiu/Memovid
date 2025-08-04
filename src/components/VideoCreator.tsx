@@ -9,6 +9,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { Photo, AudioFile, VideoSettings } from '../types';
 import { debugVideoCreation } from '../utils/videoDebug';
 import { cleanupPhotoUrls } from '../utils/imageOptimization';
+import { formatDuration } from '../utils/timeUtils';
 
 // Generate filename based on current date and time
 const generateVideoFilename = (): string => {
@@ -288,7 +289,7 @@ const VideoCreator: React.FC = () => {
                   <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{t('photoOrder')}</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {t('photoOrderDescription')}
-                    {photos.length > 0 && ` ${t('totalVideoLength', { duration: Math.round(totalDuration).toString() })}`}
+                    {photos.length > 0 && ` ${t('totalVideoLength', { duration: formatDuration(totalDuration) })}`}
                   </p>
                 </div>
                 {photos.length > 1 && (

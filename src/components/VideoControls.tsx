@@ -2,6 +2,7 @@ import React from 'react';
 import { Clock, Sparkles } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { VideoSettings, Photo } from '../types';
+import { formatDuration } from '../utils/timeUtils';
 
 interface VideoControlsProps {
   settings: VideoSettings;
@@ -26,13 +27,6 @@ const VideoControls: React.FC<VideoControlsProps> = ({
       ...settings,
       [key]: value
     });
-  };
-
-  const formatDuration = (seconds: number) => {
-    const roundedSeconds = Math.round(seconds);
-    const mins = Math.floor(roundedSeconds / 60);
-    const secs = roundedSeconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
