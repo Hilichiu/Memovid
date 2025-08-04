@@ -128,7 +128,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full min-w-0">
       <input
         ref={fileInputRef}
         type="file"
@@ -153,20 +153,23 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
           </div>
         </button>
       ) : (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Volume2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 w-full min-w-0">
+          <div className="flex items-start gap-3 mb-3 w-full min-w-0">
+            <Volume2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0 w-0">
+              <div
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate w-full"
+                title={audioFile.name}
+              >
                 {audioFile.name}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
                 {t('duration', { duration: formatDuration(audioFile.duration) })}
               </div>
             </div>
             <button
               onClick={removeAudio}
-              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors duration-200"
+              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors duration-200 flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -176,13 +179,13 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
             ref={audioRef}
             src={audioFile.url}
             controls
-            className="w-full h-8"
-            style={{ height: '32px' }}
+            className="w-full h-8 max-w-full"
+            style={{ height: '32px', minWidth: 0 }}
           />
 
           <button
             onClick={openFileDialog}
-            className="mt-3 w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+            className="mt-3 w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 px-2 py-1 text-center"
           >
             {t('chooseDifferentFile')}
           </button>

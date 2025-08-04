@@ -209,7 +209,7 @@ class VideoProcessor {
 
       // Handle audio mapping based on video content and settings
       const hasVideoContent = photos.some(media => media.type === 'video');
-      
+
       if (audio && hasVideoContent && settings.keepOriginalVideoAudio) {
         // Mix background audio with video audio
         // This requires updating the filter complex to handle audio mixing
@@ -234,7 +234,7 @@ class VideoProcessor {
       // Video encoding options - optimized for speed
       const hasVideos = photos.some(media => media.type === 'video');
       const outputFrameRate = hasVideos ? 30 : 24; // Use 30fps if videos present, 24fps for photos only
-      
+
       args.push(
         '-c:v', 'libx264',
         '-preset', 'ultrafast', // Fastest encoding preset
@@ -322,7 +322,7 @@ class VideoProcessor {
     // Handle different durations for images vs videos
     const hasVideos = photos.some(media => media.type === 'video');
     const frameRate = hasVideos ? 30 : 24; // Use 30fps if videos present, 24fps for photos only
-    
+
     photos.forEach((media, i) => {
       if (media.type === 'image') {
         // Images use photoDuration and need setpts for timing
@@ -344,7 +344,7 @@ class VideoProcessor {
 
     if (!fadeInOut) {
       filter += photos.map((_, i) => `[v${i}]`).join('') + `concat=n=${photos.length}:v=1:a=0[outv]`;
-      
+
       // Handle audio if video audio should be preserved
       if (hasVideos && settings.keepOriginalVideoAudio) {
         // Extract and concatenate audio from videos
@@ -354,7 +354,7 @@ class VideoProcessor {
           }
           return null;
         }).filter(Boolean);
-        
+
         if (videoAudioStreams.length > 0) {
           if (hasBackgroundAudio) {
             // Mix video audio with background audio
@@ -365,7 +365,7 @@ class VideoProcessor {
           }
         }
       }
-      
+
       return filter;
     }
 
@@ -385,7 +385,7 @@ class VideoProcessor {
       // Concat all photos first, then apply final fade out to black
       filter += photos.map((_, i) => `[v${i}f]`).join('') + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
       filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
-      
+
       // Handle audio if video audio should be preserved
       if (hasVideos && settings.keepOriginalVideoAudio) {
         const videoAudioStreams = photos.map((media, i) => {
@@ -394,7 +394,7 @@ class VideoProcessor {
           }
           return null;
         }).filter(Boolean);
-        
+
         if (videoAudioStreams.length > 0) {
           if (hasBackgroundAudio) {
             filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
@@ -403,7 +403,7 @@ class VideoProcessor {
           }
         }
       }
-      
+
       return filter;
     }
 
@@ -412,7 +412,7 @@ class VideoProcessor {
       const media = photos[0];
       const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
-      
+
       // Handle audio for single video
       if (media.type === 'video' && settings.keepOriginalVideoAudio) {
         if (hasBackgroundAudio) {
@@ -421,7 +421,7 @@ class VideoProcessor {
           filter += `;[0:a]acopy[outa]`;
         }
       }
-      
+
       return filter;
     }
 
@@ -451,7 +451,7 @@ class VideoProcessor {
     const streams = photos.map((_, i) => `[v${i}f]`).join('');
     filter += streams + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
     filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
-    
+
     // Handle audio if video audio should be preserved
     if (hasVideos && settings.keepOriginalVideoAudio) {
       const videoAudioStreams = photos.map((media, i) => {
@@ -460,7 +460,7 @@ class VideoProcessor {
         }
         return null;
       }).filter(Boolean);
-      
+
       if (videoAudioStreams.length > 0) {
         if (hasBackgroundAudio) {
           filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
@@ -469,7 +469,7 @@ class VideoProcessor {
         }
       }
     }
-    
+
     return filter;
   }
 }
