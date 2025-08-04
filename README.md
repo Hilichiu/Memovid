@@ -42,7 +42,7 @@ A powerful, modern web application that transforms your photos and videos into s
 
 ## 🎯 Live Demo
 
-Visit Memovid: [https://hilichiu.github.io/Memovid](https://hilichiu.github.io/Memovid)
+Visit Memovid: [https://hilichiu.github.io/memovid](https://hilichiu.github.io/memovid)
 
 > **Transform your memories into movies - photos, videos, and music combined!**
 
@@ -69,8 +69,8 @@ Visit Memovid: [https://hilichiu.github.io/Memovid](https://hilichiu.github.io/M
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Hilichiu/Memovid.git
-cd Memovid
+git clone https://github.com/Hilichiu/memovid.git
+cd memovid
 ```
 
 2. Install dependencies:

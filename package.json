@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://hilichiu.github.io/Memovid",
+  "homepage": "https://hilichiu.github.io/memovid",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
