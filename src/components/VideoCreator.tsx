@@ -283,11 +283,24 @@ const VideoCreator: React.FC = () => {
           {/* Photo Reordering */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{t('photoOrder')}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('photoOrderDescription')}
-                {photos.length > 0 && ` ${t('totalVideoLength', { duration: Math.round(totalDuration).toString() })}`}
-              </p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{t('photoOrder')}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {t('photoOrderDescription')}
+                    {photos.length > 0 && ` ${t('totalVideoLength', { duration: Math.round(totalDuration).toString() })}`}
+                  </p>
+                </div>
+                {photos.length > 1 && (
+                  <button
+                    onClick={() => setPhotos([...photos].reverse())}
+                    className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 border border-blue-200 dark:border-blue-600 hover:border-blue-300 dark:hover:border-blue-500"
+                    title={t('reverseOrder')}
+                  >
+                    {t('reverse')}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="p-6">
               <PhotoReorder photos={photos} onReorder={setPhotos} />
