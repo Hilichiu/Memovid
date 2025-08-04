@@ -147,48 +147,69 @@ class VideoProcessor {
           }
         }
 
-        if (audio.duration < totalDuration) {
-          const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
-          let audioArgs = [
-            '-stream_loop', loopCount.toString(),
-            '-i', audioInputName,
-            '-t', totalDuration.toString()
-          ];
-
-          // Add audio fade effects if enabled
-          if (settings.audioFadeInOut) {
-            audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+        // Process audio with error handling for silent or corrupted audio files
+        try {
+          if (!audio.duration || audio.duration <= 0) {
+            throw new Error('Audio file has no detectable duration or is silent');
           }
 
-          audioArgs.push(
-            '-c:a', 'aac',
-            '-ar', '44100', // Match optimized sample rate
-            '-ac', '2',     // Ensure stereo output
-            '-b:a', '96k',  // Optimized bitrate for speed
-            'audio.aac'
-          );
+          if (audio.duration < totalDuration) {
+            const loopCount = Math.ceil(totalDuration / audio.duration) - 1;
+            let audioArgs = [
+              '-stream_loop', loopCount.toString(),
+              '-i', audioInputName,
+              '-t', totalDuration.toString()
+            ];
 
-          await ffmpeg.exec(audioArgs);
-        } else {
-          let audioArgs = [
-            '-i', audioInputName,
-            '-t', totalDuration.toString()
-          ];
+            // Add audio fade effects if enabled
+            if (settings.audioFadeInOut) {
+              audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+            }
 
-          // Add audio fade effects if enabled
-          if (settings.audioFadeInOut) {
-            audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+            audioArgs.push(
+              '-c:a', 'aac',
+              '-ar', '44100', // Match optimized sample rate
+              '-ac', '2',     // Ensure stereo output
+              '-b:a', '96k',  // Optimized bitrate for speed
+              'audio.aac'
+            );
+
+            await ffmpeg.exec(audioArgs);
+          } else {
+            let audioArgs = [
+              '-i', audioInputName,
+              '-t', totalDuration.toString()
+            ];
+
+            // Add audio fade effects if enabled
+            if (settings.audioFadeInOut) {
+              audioArgs.push('-af', `afade=t=in:ss=0:d=1,afade=t=out:st=${totalDuration - 1}:d=1`);
+            }
+
+            audioArgs.push(
+              '-c:a', 'aac',
+              '-ar', '44100', // Match optimized sample rate
+              '-ac', '2',     // Ensure stereo output
+              '-b:a', '96k',  // Optimized bitrate for speed
+              'audio.aac'
+            );
+
+            await ffmpeg.exec(audioArgs);
           }
-
-          audioArgs.push(
+        } catch (error) {
+          console.warn('Failed to process audio file (likely silent or corrupted audio):', error);
+          // Create a silent audio track as fallback for silent/corrupted audio files
+          console.log('Creating silent audio track for corrupted/silent audio file...');
+          await ffmpeg.exec([
+            '-f', 'lavfi',
+            '-i', `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${totalDuration}`,
             '-c:a', 'aac',
-            '-ar', '44100', // Match optimized sample rate
-            '-ac', '2',     // Ensure stereo output
-            '-b:a', '96k',  // Optimized bitrate for speed
+            '-ar', '44100',
+            '-ac', '2',
+            '-b:a', '96k',
             'audio.aac'
-          );
-
-          await ffmpeg.exec(audioArgs);
+          ]);
+          console.log('Silent audio track created as fallback for audio processing');
         }
 
         // Verify the audio file was created successfully
