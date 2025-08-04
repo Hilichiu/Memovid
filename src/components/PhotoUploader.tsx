@@ -31,16 +31,20 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
         return;
       }
 
-      // Limit total photos to prevent memory issues
-      const remainingSlots = Math.max(0, 50 - photos.length); // Max 50 photos
+      // Limit total photos to prevent memory issues - responsive based on device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0);
+      const MAX_PHOTOS = isMobile ? 100 : 200; // 100 for mobile, 200 for desktop
+      const remainingSlots = Math.max(0, MAX_PHOTOS - photos.length);
       const filesToProcess = fileArray.slice(0, remainingSlots);
 
       if (filesToProcess.length < fileArray.length) {
-        alert(`Maximum 50 photos allowed. Processing first ${filesToProcess.length} photos.`);
+        alert(`Maximum ${MAX_PHOTOS} photos allowed. Processing first ${filesToProcess.length} photos.`);
       }
 
       if (filesToProcess.length === 0) {
-        alert('Maximum photo limit reached (50 photos).');
+        alert(`Maximum photo limit reached (${MAX_PHOTOS} photos).`);
         setIsProcessing(false);
         return;
       }
