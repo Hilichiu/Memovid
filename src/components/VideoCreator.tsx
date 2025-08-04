@@ -6,7 +6,9 @@ import PhotoReorder from './PhotoReorder';
 import VideoControls from './VideoControls';
 import VideoProcessor from './VideoProcessor';
 import { useTranslation } from '../hooks/useTranslation';
-import { Photo, AudioFile, VideoSettings } from '../types';
+import { useVideoSettings } from '../hooks/useVideoSettings';
+import { useAudioFile } from '../hooks/useAudioFile';
+import { Photo } from '../types';
 import { debugVideoCreation } from '../utils/videoDebug';
 import { cleanupPhotoUrls } from '../utils/imageOptimization';
 import { formatDuration } from '../utils/timeUtils';
@@ -26,21 +28,14 @@ const generateVideoFilename = (): string => {
 
 const VideoCreator: React.FC = () => {
   const { t } = useTranslation();
+  const { settings, setSettings, updateSettings } = useVideoSettings();
+  const { audioFile, setAudioFile } = useAudioFile();
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [audioFile, setAudioFile] = useState<AudioFile | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [settings, setSettings] = useState<VideoSettings>({
-    photoDuration: 2.5,
-    fadeInOut: true,
-    fadePosition: 'throughout',
-    audioFadeInOut: true,
-    applyPhotoDurationToVideos: false,
-    keepOriginalVideoAudio: true
-  });
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
 
@@ -251,6 +246,7 @@ const VideoCreator: React.FC = () => {
                 onAudioChange={setAudioFile}
                 settings={settings}
                 onSettingsChange={setSettings}
+                updateSettings={updateSettings}
                 photos={photos}
               />
             </div>
@@ -272,6 +268,7 @@ const VideoCreator: React.FC = () => {
               <VideoControls
                 settings={settings}
                 onSettingsChange={setSettings}
+                updateSettings={updateSettings}
                 totalDuration={totalDuration}
                 photos={photos}
               />

@@ -7,6 +7,7 @@ import { formatDuration } from '../utils/timeUtils';
 interface VideoControlsProps {
   settings: VideoSettings;
   onSettingsChange: (settings: VideoSettings) => void;
+  updateSettings?: (key: keyof VideoSettings, value: any) => void;
   totalDuration: number;
   photos: Photo[];
 }
@@ -14,6 +15,7 @@ interface VideoControlsProps {
 const VideoControls: React.FC<VideoControlsProps> = ({
   settings,
   onSettingsChange,
+  updateSettings: externalUpdateSettings,
   totalDuration,
   photos
 }) => {
@@ -23,10 +25,16 @@ const VideoControls: React.FC<VideoControlsProps> = ({
   const hasVideos = photos.some(photo => photo.type === 'video');
 
   const updateSettings = (key: keyof VideoSettings, value: any) => {
-    onSettingsChange({
-      ...settings,
-      [key]: value
-    });
+    if (externalUpdateSettings) {
+      // Use the hook's updateSettings function if provided
+      externalUpdateSettings(key, value);
+    } else {
+      // Fallback to the original pattern for backwards compatibility
+      onSettingsChange({
+        ...settings,
+        [key]: value
+      });
+    }
   };
 
   return (

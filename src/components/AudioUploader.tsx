@@ -8,6 +8,7 @@ interface AudioUploaderProps {
   onAudioChange: (audio: AudioFile | null) => void;
   settings: VideoSettings;
   onSettingsChange: (settings: VideoSettings) => void;
+  updateSettings?: (key: keyof VideoSettings, value: any) => void;
   photos: Photo[];
 }
 
@@ -16,6 +17,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
   onAudioChange,
   settings,
   onSettingsChange,
+  updateSettings: externalUpdateSettings,
   photos
 }) => {
   const { t } = useTranslation();
@@ -26,10 +28,16 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
   const hasVideos = photos.some(photo => photo.type === 'video');
 
   const updateSettings = (key: keyof VideoSettings, value: any) => {
-    onSettingsChange({
-      ...settings,
-      [key]: value
-    });
+    if (externalUpdateSettings) {
+      // Use the hook's updateSettings function if provided
+      externalUpdateSettings(key, value);
+    } else {
+      // Fallback to the original pattern for backwards compatibility
+      onSettingsChange({
+        ...settings,
+        [key]: value
+      });
+    }
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
