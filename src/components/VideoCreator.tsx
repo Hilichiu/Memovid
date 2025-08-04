@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Image, Download, Play, Settings, X } from 'lucide-react';
+import { Music, Image, Download, Play, Settings, X, ArrowUpDown } from 'lucide-react';
 import PhotoUploader from './PhotoUploader';
 import AudioUploader from './AudioUploader';
 import PhotoReorder from './PhotoReorder';
@@ -295,10 +295,10 @@ const VideoCreator: React.FC = () => {
                 {photos.length > 1 && (
                   <button
                     onClick={() => setPhotos([...photos].reverse())}
-                    className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 border border-blue-200 dark:border-blue-600 hover:border-blue-300 dark:hover:border-blue-500"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 border border-blue-200 dark:border-blue-600 hover:border-blue-300 dark:hover:border-blue-500"
                     title={t('reverseOrder')}
                   >
-                    {t('reverse')}
+                    <ArrowUpDown className="w-4 h-4" />
                   </button>
                 )}
               </div>
