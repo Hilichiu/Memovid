@@ -353,23 +353,7 @@ class VideoProcessor {
 
       // Handle audio if video audio should be preserved
       if (hasVideos && settings.keepOriginalVideoAudio) {
-        // Extract and concatenate audio from videos
-        const videoAudioStreams = photos.map((media, i) => {
-          if (media.type === 'video') {
-            return `[${i}:a]`;
-          }
-          return null;
-        }).filter(Boolean);
-
-        if (videoAudioStreams.length > 0) {
-          if (hasBackgroundAudio) {
-            // Mix video audio with background audio
-            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
-          } else {
-            // Only video audio
-            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
-          }
-        }
+        filter += this.buildAudioFilter(photos, settings, hasBackgroundAudio || false, photos.length);
       }
 
       return filter;
@@ -394,20 +378,7 @@ class VideoProcessor {
 
       // Handle audio if video audio should be preserved
       if (hasVideos && settings.keepOriginalVideoAudio) {
-        const videoAudioStreams = photos.map((media, i) => {
-          if (media.type === 'video') {
-            return `[${i}:a]`;
-          }
-          return null;
-        }).filter(Boolean);
-
-        if (videoAudioStreams.length > 0) {
-          if (hasBackgroundAudio) {
-            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
-          } else {
-            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
-          }
-        }
+        filter += this.buildAudioFilter(photos, settings, hasBackgroundAudio || false, photos.length);
       }
 
       return filter;
@@ -472,23 +443,50 @@ class VideoProcessor {
 
     // Handle audio if video audio should be preserved
     if (hasVideos && settings.keepOriginalVideoAudio) {
-      const videoAudioStreams = photos.map((media, i) => {
-        if (media.type === 'video') {
-          return `[${i}:a]`;
-        }
-        return null;
-      }).filter(Boolean);
-
-      if (videoAudioStreams.length > 0) {
-        if (hasBackgroundAudio) {
-          filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
-        } else {
-          filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
-        }
-      }
+      filter += this.buildAudioFilter(photos, settings, hasBackgroundAudio || false, photos.length);
     }
 
     return filter;
+  }
+
+  private buildAudioFilter(photos: Photo[], settings: VideoSettings, hasBackgroundAudio: boolean, audioInputIndex: number): string {
+    const { photoDuration } = settings;
+    let audioFilter = '';
+    let audioStreams: string[] = [];
+
+    // Create audio streams with proper timing for each media
+    photos.forEach((media, i) => {
+      if (media.type === 'video') {
+        // For videos, check if we need to clip audio duration
+        if (settings.applyPhotoDurationToVideos && media.duration && media.duration > photoDuration) {
+          // Clip video audio to photo duration
+          audioFilter += `[${i}:a]atrim=0:${photoDuration}[video_audio${i}];`;
+          audioStreams.push(`[video_audio${i}]`);
+        } else {
+          // Use video audio as-is
+          audioStreams.push(`[${i}:a]`);
+        }
+      } else {
+        // For images, create silent audio of photo duration
+        audioFilter += `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${photoDuration}[silence${i}];`;
+        audioStreams.push(`[silence${i}]`);
+      }
+    });
+
+    if (audioStreams.length > 0) {
+      // Concatenate audio streams to match video timeline
+      audioFilter += `${audioStreams.join('')}concat=n=${photos.length}:v=0:a=1[video_audio];`;
+
+      if (hasBackgroundAudio) {
+        // Mix the timeline-synced video audio with background audio
+        return `;${audioFilter}[video_audio][${audioInputIndex}:a]amix=inputs=2:duration=shortest[outa]`;
+      } else {
+        // Only video audio with proper timeline
+        return `;${audioFilter.slice(0, -1)}[outa]`; // Remove the last semicolon and add outa
+      }
+    }
+
+    return '';
   }
 }
 
