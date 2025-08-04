@@ -26,7 +26,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
       );
 
       if (fileArray.length === 0) {
-        alert('Please select image or video files only.');
+        alert(t('selectImageVideoOnly'));
         setIsProcessing(false);
         return;
       }
@@ -40,11 +40,14 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
       const filesToProcess = fileArray.slice(0, remainingSlots);
 
       if (filesToProcess.length < fileArray.length) {
-        alert(`Maximum ${MAX_PHOTOS} photos allowed. Processing first ${filesToProcess.length} photos.`);
+        alert(t('maxPhotosReached', {
+          maxPhotos: MAX_PHOTOS.toString(),
+          processed: filesToProcess.length.toString()
+        }));
       }
 
       if (filesToProcess.length === 0) {
-        alert(`Maximum photo limit reached (${MAX_PHOTOS} photos).`);
+        alert(t('maxPhotosLimitReached', { maxPhotos: MAX_PHOTOS.toString() }));
         setIsProcessing(false);
         return;
       }

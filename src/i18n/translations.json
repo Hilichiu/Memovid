@@ -56,6 +56,9 @@
     "pleaseSelectPhotos": "Please select at least one photo or video",
     "pleaseSelectAudio": "Please select an audio or video file",
     "errorCreatingVideo": "Error creating video. Please try again.",
+    "selectImageVideoOnly": "Please select image or video files only.",
+    "maxPhotosReached": "Maximum {{maxPhotos}} photos allowed. Processing first {{processed}} photos.",
+    "maxPhotosLimitReached": "Maximum photo limit reached ({{maxPhotos}} photos).",
     "mb": "MB"
   },
   "zh-TW": {
@@ -115,6 +118,9 @@
     "pleaseSelectPhotos": "請至少選擇一張照片或一個影片",
     "pleaseSelectAudio": "請選擇音樂或影片檔案",
     "errorCreatingVideo": "製作影片時發生錯誤。請重試。",
+    "selectImageVideoOnly": "請選擇圖片或影片檔案。",
+    "maxPhotosReached": "最多允許 {{maxPhotos}} 個媒體檔案。正在處理前 {{processed}} 個檔案。",
+    "maxPhotosLimitReached": "已達到媒體檔案上限（{{maxPhotos}} 個檔案）。",
     "mb": "MB"
   }
 }
