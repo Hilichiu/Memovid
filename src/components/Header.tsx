@@ -1,8 +1,7 @@
 import React from 'react';
-import { Play, Sun, Moon, Languages } from 'lucide-react';
+import { Sun, Moon, Languages } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from '../hooks/useTranslation';
-import { Language } from '../types';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -18,7 +17,7 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
-            <Play className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <img src="./icon.png" alt="Memovid Logo" className="w-8 h-8 -translate-y-1" />
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
               {t('title')}
             </h1>
