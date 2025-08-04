@@ -117,7 +117,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('selectedPhotos', { count: photos.length.toString() })}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto overflow-x-hidden p-2">
+          <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto overflow-x-hidden p-2">
             {photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
