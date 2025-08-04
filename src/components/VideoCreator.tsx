@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Image, Download, Play, Settings, X, ArrowUpDown } from 'lucide-react';
+import { Music, Image, Download, Play, Settings, ArrowUpDown } from 'lucide-react';
 import PhotoUploader from './PhotoUploader';
 import AudioUploader from './AudioUploader';
 import PhotoReorder from './PhotoReorder';
@@ -34,7 +34,6 @@ const VideoCreator: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
@@ -47,13 +46,13 @@ const VideoCreator: React.FC = () => {
     }
   }, [photos, audioFile, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Enhanced download function with iOS Photos app guidance
+  // Enhanced download function with direct iOS handling
   const handleDownload = async () => {
     if (!downloadUrl) return;
 
     if (isIOS) {
-      // Show instructions modal for iOS users
-      setShowIOSInstructions(true);
+      // Directly proceed with iOS download - no popup
+      await proceedWithIOSDownload();
       return;
     }
 
@@ -67,7 +66,7 @@ const VideoCreator: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Function to proceed with iOS download after showing instructions
+  // Function to handle iOS download
   const proceedWithIOSDownload = async () => {
     if (!downloadUrl) return;
 
@@ -86,7 +85,6 @@ const VideoCreator: React.FC = () => {
             title: 'My Video',
             text: 'Video created with Memovid'
           });
-          setShowIOSInstructions(false);
           return;
         }
       }
@@ -118,8 +116,6 @@ const VideoCreator: React.FC = () => {
       // Fallback: Open in new window (original approach)
       window.open(downloadUrl, '_blank');
     }
-
-    setShowIOSInstructions(false);
   };
 
   // Better iOS detection using the same strategy as PhotoReorder
@@ -380,52 +376,6 @@ const VideoCreator: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* iOS Instructions Modal */}
-      {showIOSInstructions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('saveToPhotos')}
-              </h3>
-              <button
-                onClick={() => setShowIOSInstructions(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
-              <p className="font-medium">
-                {t('iosInstructions1')}
-              </p>
-
-              <ol className="list-decimal list-inside space-y-2">
-                <li>{t('iosInstructions2')}</li>
-                <li>{t('iosInstructions3')}</li>
-                <li>{t('iosInstructions4')}</li>
-              </ol>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowIOSInstructions(false)}
-                  className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  {t('cancel')}
-                </button>
-                <button
-                  onClick={proceedWithIOSDownload}
-                  className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
-                >
-                  {t('openVideo')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
