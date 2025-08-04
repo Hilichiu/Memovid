@@ -244,6 +244,8 @@ class VideoProcessor {
         '-tune', 'fastdecode',   // Optimize for fast decoding
         '-crf', '23',            // Better quality with reasonable speed
         '-pix_fmt', 'yuv420p',
+        '-color_range', 'tv',    // Limited range (16-235) to prevent oversaturation
+        '-colorspace', 'bt709',  // Standard HD color space for proper color reproduction
         '-r', outputFrameRate.toString(), // Dynamic frame rate based on content
         '-threads', '0',         // Use all available CPU threads
         '-movflags', '+faststart',

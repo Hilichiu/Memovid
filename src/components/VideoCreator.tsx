@@ -34,7 +34,7 @@ const VideoCreator: React.FC = () => {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [settings, setSettings] = useState<VideoSettings>({
-    photoDuration: 3,
+    photoDuration: 2.5,
     fadeInOut: true,
     fadePosition: 'throughout',
     audioFadeInOut: true,
