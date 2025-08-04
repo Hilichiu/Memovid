@@ -174,7 +174,7 @@ class VideoProcessor {
 
         onProgress(50);
       }      // Create filter complex for video
-      const filterComplex = this.buildFilter(photos, settings);
+      const filterComplex = this.buildFilter(photos, settings, audio ? true : false);
       console.log('Filter complex:', filterComplex);
       onProgress(60);
 
@@ -207,23 +207,41 @@ class VideoProcessor {
       // Map video output
       args.push('-map', '[outv]');
 
-      // Map audio if available
-      if (audio) {
+      // Handle audio mapping based on video content and settings
+      const hasVideoContent = photos.some(media => media.type === 'video');
+      
+      if (audio && hasVideoContent && settings.keepOriginalVideoAudio) {
+        // Mix background audio with video audio
+        // This requires updating the filter complex to handle audio mixing
+        args.push('-map', '[outa]'); // We'll create this in the filter complex
+        args.push('-c:a', 'aac');
+        args.push('-b:a', '128k');
+      } else if (audio) {
+        // Only background audio
         args.push('-map', `${photos.length}:a`);
         args.push('-c:a', 'aac');
         args.push('-b:a', '96k'); // Optimized audio bitrate for speed
+      } else if (hasVideoContent && settings.keepOriginalVideoAudio) {
+        // Only video audio (no background music)
+        args.push('-map', '[outa]'); // We'll create this in the filter complex
+        args.push('-c:a', 'aac');
+        args.push('-b:a', '128k');
       } else {
+        // No audio
         args.push('-an');
       }
 
       // Video encoding options - optimized for speed
+      const hasVideos = photos.some(media => media.type === 'video');
+      const outputFrameRate = hasVideos ? 30 : 24; // Use 30fps if videos present, 24fps for photos only
+      
       args.push(
         '-c:v', 'libx264',
         '-preset', 'ultrafast', // Fastest encoding preset
         '-tune', 'fastdecode',   // Optimize for fast decoding
         '-crf', '23',            // Better quality with reasonable speed
         '-pix_fmt', 'yuv420p',
-        '-r', '24',              // Lower frame rate for faster processing
+        '-r', outputFrameRate.toString(), // Dynamic frame rate based on content
         '-threads', '0',         // Use all available CPU threads
         '-movflags', '+faststart',
         '-shortest',             // Stop at shortest input
@@ -290,7 +308,7 @@ class VideoProcessor {
     }
   }
 
-  private buildFilter(photos: Photo[], settings: VideoSettings): string {
+  private buildFilter(photos: Photo[], settings: VideoSettings, hasBackgroundAudio?: boolean): string {
     const { photoDuration, fadeInOut, fadePosition } = settings;
     const fadeDuration = 0.5;
     let filter = '';
@@ -302,13 +320,16 @@ class VideoProcessor {
 
     // Scale and prepare each media stream (photos/videos) to 1080p with optimization
     // Handle different durations for images vs videos
+    const hasVideos = photos.some(media => media.type === 'video');
+    const frameRate = hasVideos ? 30 : 24; // Use 30fps if videos present, 24fps for photos only
+    
     photos.forEach((media, i) => {
       if (media.type === 'image') {
         // Images use photoDuration and need setpts for timing
-        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=24,setsar=1[v${i}];`;
+        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setpts=PTS-STARTPTS,fps=${frameRate},setsar=1[v${i}];`;
       } else {
         // Videos use their natural duration and timing
-        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=24,setsar=1[v${i}];`;
+        filter += `[${i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=${frameRate},setsar=1[v${i}];`;
       }
     });
 
@@ -323,6 +344,28 @@ class VideoProcessor {
 
     if (!fadeInOut) {
       filter += photos.map((_, i) => `[v${i}]`).join('') + `concat=n=${photos.length}:v=1:a=0[outv]`;
+      
+      // Handle audio if video audio should be preserved
+      if (hasVideos && settings.keepOriginalVideoAudio) {
+        // Extract and concatenate audio from videos
+        const videoAudioStreams = photos.map((media, i) => {
+          if (media.type === 'video') {
+            return `[${i}:a]`;
+          }
+          return null;
+        }).filter(Boolean);
+        
+        if (videoAudioStreams.length > 0) {
+          if (hasBackgroundAudio) {
+            // Mix video audio with background audio
+            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+          } else {
+            // Only video audio
+            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
+          }
+        }
+      }
+      
       return filter;
     }
 
@@ -342,6 +385,25 @@ class VideoProcessor {
       // Concat all photos first, then apply final fade out to black
       filter += photos.map((_, i) => `[v${i}f]`).join('') + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
       filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
+      
+      // Handle audio if video audio should be preserved
+      if (hasVideos && settings.keepOriginalVideoAudio) {
+        const videoAudioStreams = photos.map((media, i) => {
+          if (media.type === 'video') {
+            return `[${i}:a]`;
+          }
+          return null;
+        }).filter(Boolean);
+        
+        if (videoAudioStreams.length > 0) {
+          if (hasBackgroundAudio) {
+            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+          } else {
+            filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
+          }
+        }
+      }
+      
       return filter;
     }
 
@@ -350,6 +412,16 @@ class VideoProcessor {
       const media = photos[0];
       const mediaDuration = (media.type === 'video' && media.duration && !settings.applyPhotoDurationToVideos) ? media.duration : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
+      
+      // Handle audio for single video
+      if (media.type === 'video' && settings.keepOriginalVideoAudio) {
+        if (hasBackgroundAudio) {
+          filter += `;[0:a][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+        } else {
+          filter += `;[0:a]acopy[outa]`;
+        }
+      }
+      
       return filter;
     }
 
@@ -379,6 +451,25 @@ class VideoProcessor {
     const streams = photos.map((_, i) => `[v${i}f]`).join('');
     filter += streams + `concat=n=${photos.length}:v=1:a=0[concat_out];`;
     filter += `[concat_out]fade=t=out:st=${totalVideoDuration - fadeDuration}:d=${fadeDuration}[outv]`;
+    
+    // Handle audio if video audio should be preserved
+    if (hasVideos && settings.keepOriginalVideoAudio) {
+      const videoAudioStreams = photos.map((media, i) => {
+        if (media.type === 'video') {
+          return `[${i}:a]`;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      if (videoAudioStreams.length > 0) {
+        if (hasBackgroundAudio) {
+          filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[video_audio];[video_audio][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+        } else {
+          filter += `;${videoAudioStreams.join('')}concat=n=${videoAudioStreams.length}:v=0:a=1[outa]`;
+        }
+      }
+    }
+    
     return filter;
   }
 }

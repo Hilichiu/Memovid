@@ -37,7 +37,8 @@ const VideoCreator: React.FC = () => {
     fadeInOut: true,
     fadePosition: 'beginning-end',
     audioFadeInOut: true,
-    applyPhotoDurationToVideos: false
+    applyPhotoDurationToVideos: false,
+    keepOriginalVideoAudio: true
   });
 
   const videoProcessorRef = useRef<VideoProcessor | null>(null);
@@ -243,6 +244,7 @@ const VideoCreator: React.FC = () => {
                 onAudioChange={setAudioFile}
                 settings={settings}
                 onSettingsChange={setSettings}
+                photos={photos}
               />
             </div>
           </div>

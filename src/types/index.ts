@@ -23,6 +23,7 @@ export interface VideoSettings {
   fadePosition: 'throughout' | 'beginning-end';
   audioFadeInOut: boolean;
   applyPhotoDurationToVideos: boolean;
+  keepOriginalVideoAudio: boolean;
 }
 
 export interface CreateVideoParams {

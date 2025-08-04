@@ -1,24 +1,29 @@
 import React, { useRef } from 'react';
 import { Music, X, Volume2, Sparkles } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
-import { AudioFile, VideoSettings } from '../types';
+import { AudioFile, VideoSettings, Photo } from '../types';
 
 interface AudioUploaderProps {
   audioFile: AudioFile | null;
   onAudioChange: (audio: AudioFile | null) => void;
   settings: VideoSettings;
   onSettingsChange: (settings: VideoSettings) => void;
+  photos: Photo[];
 }
 
 const AudioUploader: React.FC<AudioUploaderProps> = ({
   audioFile,
   onAudioChange,
   settings,
-  onSettingsChange
+  onSettingsChange,
+  photos
 }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Check if there are any videos in the photos array
+  const hasVideos = photos.some(photo => photo.type === 'video');
 
   const updateSettings = (key: keyof VideoSettings, value: any) => {
     onSettingsChange({
@@ -203,6 +208,33 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
               </label>
             </div>
           </div>
+
+          {/* Video Audio Management */}
+          {hasVideos && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-2 mb-3">
+                <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('videoAudioSettings')}
+                </label>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.keepOriginalVideoAudio}
+                    onChange={(e) => updateSettings('keepOriginalVideoAudio', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('keepOriginalVideoSound')}</span>
+                </label>
+                <div className="text-xs text-gray-500 dark:text-gray-400 ml-7">
+                  {t('keepOriginalVideoSoundHelp')}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
