@@ -269,9 +269,8 @@ class VideoProcessor {
         args.push('-c:a', 'aac');
         args.push('-b:a', '96k'); // Optimized audio bitrate for speed
       } else if (hasVideoContent && settings.keepOriginalVideoAudio) {
-        // Only video audio (no background music) - but don't force audio if video has none
-        // Use -map 0:a? to optionally map audio if it exists
-        args.push('-map', '0:a?');
+        // Only video audio (no background music) - use filter complex output since buildAudioFilter creates [outa]
+        args.push('-map', '[outa]');
         args.push('-c:a', 'aac');
         args.push('-b:a', '128k');
       } else {
@@ -340,7 +339,7 @@ class VideoProcessor {
       onProgress(100);
 
       // Create blob with proper video MIME type
-      const blob = new Blob([uint8Array], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(uint8Array)], { type: 'video/mp4' });
       console.log('Created blob size:', blob.size);
 
       return blob;
@@ -515,14 +514,14 @@ class VideoProcessor {
 
     if (audioStreams.length > 0) {
       // Concatenate audio streams to match video timeline
-      audioFilter += `${audioStreams.join('')}concat=n=${photos.length}:v=0:a=1[video_audio];`;
-
       if (hasBackgroundAudio) {
+        audioFilter += `${audioStreams.join('')}concat=n=${photos.length}:v=0:a=1[video_audio];`;
         // Mix the timeline-synced video audio with background audio
         return `;${audioFilter}[video_audio][${audioInputIndex}:a]amix=inputs=2:duration=shortest[outa]`;
       } else {
-        // Only video audio with proper timeline
-        return `;${audioFilter.slice(0, -1)}[outa]`; // Remove the last semicolon and add outa
+        // Only video audio with proper timeline - output directly as [outa]
+        audioFilter += `${audioStreams.join('')}concat=n=${photos.length}:v=0:a=1[outa];`;
+        return `;${audioFilter.slice(0, -1)}`; // Remove the last semicolon
       }
     }
 
