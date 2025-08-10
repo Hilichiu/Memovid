@@ -45,7 +45,7 @@
     "downloadVideo": "Download Video",
     "downloadVideoIOS": "Save to Photos",
     "downloadDescription": "Click to save your video to your device",
-    "downloadDescriptionIOS": "Tap \"Download Video\" above, then choose \"Save Video\" from the share menu",
+    "downloadDescriptionIOS": "Tap \"Save to Photos\" above, then choose \"Save Video\" from the share menu",
     "saveToPhotos": "Save to Photos",
     "iosInstructions1": "To save this video to your Photos app:",
     "iosInstructions2": "Tap \"Download Video\" below",
