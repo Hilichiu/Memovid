@@ -269,10 +269,18 @@ class VideoProcessor {
         args.push('-c:a', 'aac');
         args.push('-b:a', '96k'); // Optimized audio bitrate for speed
       } else if (hasVideoContent && settings.keepOriginalVideoAudio) {
-        // Only video audio (no background music) - use filter complex output since buildAudioFilter creates [outa]
-        args.push('-map', '[outa]');
-        args.push('-c:a', 'aac');
-        args.push('-b:a', '128k');
+        // Only video audio (no background music)
+        if (photos.length === 1) {
+          // Single video - map directly from input (no filter complex audio)
+          args.push('-map', '0:a?');
+          args.push('-c:a', 'aac');
+          args.push('-b:a', '128k');
+        } else {
+          // Multiple videos - use filter complex output
+          args.push('-map', '[outa]');
+          args.push('-c:a', 'aac');
+          args.push('-b:a', '128k');
+        }
       } else {
         // No audio
         args.push('-an');
@@ -440,11 +448,13 @@ class VideoProcessor {
           : photoDuration;
       filter += `[v0]fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${mediaDuration - fadeDuration}:d=${fadeDuration}[outv]`;
 
-      // For single video with background audio, create a safer mix
-      if (media.type === 'video' && settings.keepOriginalVideoAudio && hasBackgroundAudio) {
-        // Create a silent audio track as base, then mix with background audio
-        // This ensures we always have audio even if the video has no audio stream
-        filter += `;anullsrc=channel_layout=stereo:sample_rate=44100:duration=${mediaDuration}[video_silence];[video_silence][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+      // For single video with keepOriginalVideoAudio enabled, always create [outa]
+      if (media.type === 'video' && settings.keepOriginalVideoAudio) {
+        if (hasBackgroundAudio) {
+          // Create a silent audio track as base, then mix with background audio
+          filter += `;anullsrc=channel_layout=stereo:sample_rate=44100:duration=${mediaDuration}[video_silence];[video_silence][${photos.length}:a]amix=inputs=2:duration=shortest[outa]`;
+        }
+        // For single video without background audio, don't create [outa] in filter - handle in mapping
       }
 
       return filter;
