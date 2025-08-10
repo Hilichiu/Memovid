@@ -15,6 +15,75 @@ export interface OptimizedPhoto {
 }
 
 /**
+ * Checks if a file is a HEIF/HEIC image
+ */
+function isHeifFile(file: File): boolean {
+    const heifMimeTypes = ['image/heic', 'image/heif'];
+    const heifExtensions = ['.heic', '.heif'];
+
+    // Check MIME type
+    if (heifMimeTypes.includes(file.type.toLowerCase())) {
+        return true;
+    }
+
+    // Check file extension as fallback
+    const fileName = file.name.toLowerCase();
+    return heifExtensions.some(ext => fileName.endsWith(ext));
+}
+
+/**
+ * Creates a placeholder image for failed HEIF conversions
+ */
+function createHeifPlaceholderImage(fileName: string): Blob {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 400;
+
+    if (ctx) {
+        // Draw a gray background
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw border
+        ctx.strokeStyle = '#d1d5db';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+        // Draw text
+        ctx.fillStyle = '#6b7280';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('HEIF Format', canvas.width / 2, 150);
+        ctx.fillText('Not Supported', canvas.width / 2, 180);
+
+        ctx.font = '12px Arial';
+        ctx.fillText('Please convert to JPEG', canvas.width / 2, 220);
+        ctx.fillText('and re-upload', canvas.width / 2, 240);
+
+        // Draw file name (truncated if too long)
+        const displayName = fileName.length > 30 ? fileName.substring(0, 27) + '...' : fileName;
+        ctx.font = '10px Arial';
+        ctx.fillText(displayName, canvas.width / 2, 280);
+    }
+
+    // Convert to blob synchronously 
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const byteString = atob(dataUrl.split(',')[1]);
+    const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([ab], { type: mimeString });
+}
+
+/**
  * Creates a thumbnail version of an image file
  */
 export function createThumbnail(file: File, maxSize: number = 400): Promise<string> {
@@ -132,6 +201,29 @@ export function createVideoThumbnail(file: File, maxSize: number = 400, seekTime
  */
 export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPhoto[]> {
     const promises = files.map(async (file) => {
+        const id = Math.random().toString(36).substr(2, 9);
+
+        // Check for HEIF files and immediately create placeholder (no conversion attempt)
+        if (isHeifFile(file)) {
+            console.log(`HEIF file detected: ${file.name} - Creating placeholder (no conversion attempted)`);
+
+            const placeholderBlob = createHeifPlaceholderImage(file.name);
+            const placeholderUrl = URL.createObjectURL(placeholderBlob);
+
+            return {
+                id,
+                file: new File([placeholderBlob], file.name.replace(/\.(heic|heif)$/i, '_heif_not_supported.jpg'), {
+                    type: 'image/jpeg',
+                    lastModified: file.lastModified
+                }),
+                url: placeholderUrl,
+                thumbnailUrl: placeholderUrl,
+                name: file.name + ' (HEIF not supported)',
+                type: 'image' as const
+            };
+        }
+
+        // Process regular image/video files
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
 
@@ -139,7 +231,6 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
             throw new Error(`Invalid file type: ${file.type}`);
         }
 
-        const id = Math.random().toString(36).substr(2, 9);
         const url = URL.createObjectURL(file);
 
         try {
@@ -147,7 +238,7 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
                 const thumbnailUrl = await createThumbnail(file, 400);
                 return {
                     id,
-                    file,
+                    file: file,
                     url,
                     thumbnailUrl,
                     name: file.name,
@@ -158,7 +249,7 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
                 const { thumbnailUrl, duration } = await createVideoThumbnail(file, 400);
                 return {
                     id,
-                    file,
+                    file: file,
                     url,
                     thumbnailUrl,
                     name: file.name,
@@ -171,7 +262,7 @@ export async function createOptimizedPhotos(files: File[]): Promise<OptimizedPho
             console.warn('Thumbnail creation failed for', file.name, error);
             return {
                 id,
-                file,
+                file: file,
                 url,
                 thumbnailUrl: url,
                 name: file.name,

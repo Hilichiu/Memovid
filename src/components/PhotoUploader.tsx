@@ -21,9 +21,15 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
     setIsProcessing(true);
 
     try {
-      const fileArray = Array.from(files).filter(file =>
-        file.type.startsWith('image/') || file.type.startsWith('video/')
-      );
+      // Filter files to include images, videos, and HEIF files (by extension)
+      const fileArray = Array.from(files).filter(file => {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        // Check for HEIF files by extension (some systems don't set proper MIME types)
+        const isHeif = /\.(heic|heif)$/i.test(file.name);
+
+        return isImage || isVideo || isHeif;
+      });
 
       if (fileArray.length === 0) {
         alert(t('selectImageVideoOnly'));
@@ -55,6 +61,19 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
       // Create optimized photos with thumbnails
       const newOptimizedPhotos = await createOptimizedPhotos(filesToProcess);
 
+      // Check if any HEIF files were detected (not supported)
+      const heifFiles = newOptimizedPhotos.filter(photo =>
+        photo.name.includes('(HEIF not supported)')
+      );
+
+      if (heifFiles.length > 0) {
+        const heifNames = heifFiles.map(photo =>
+          photo.name.replace(' (HEIF not supported)', '')
+        ).join(', ');
+
+        alert(`Info: ${heifFiles.length} HEIF file(s) detected: ${heifNames}. HEIF format is not supported by web browsers. Please convert these files to JPEG for best results.`);
+      }
+
       // Convert to Photo interface
       const newPhotos: Photo[] = newOptimizedPhotos.map(optimized => ({
         id: optimized.id,
@@ -71,7 +90,13 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
       onPhotosChange([...photos, ...newPhotos]);
     } catch (error) {
       console.error('Error processing photos:', error);
-      alert('Error processing some photos. Please try again.');
+
+      // Provide specific error message for HEIF conversion issues
+      const errorMessage = error instanceof Error && error.message.includes('HEIF')
+        ? 'Error converting HEIF/HEIC files. Please try converting them to JPEG first, or use a different image format.'
+        : 'Error processing some photos. Please try again.';
+
+      alert(errorMessage);
     } finally {
       setIsProcessing(false);
       // Reset the input value
@@ -94,7 +119,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*,video/*"
+        accept="image/*,video/*,.heic,.heif"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -125,27 +150,35 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos, onPhotosChange })
             {t('selectedPhotos', { count: photos.length.toString() })}
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto overflow-x-hidden p-2">
-            {photos.map((photo, index) => (
-              <div key={photo.id} className="relative group">
-                <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                  <img
-                    src={photo.thumbnailUrl || photo.url}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+            {photos.map((photo, index) => {
+              const isHeifFile = photo.name.includes('(HEIF not supported)');
+              return (
+                <div key={photo.id} className="relative group">
+                  <div className={`aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden ${isHeifFile ? 'border-2 border-yellow-400' : ''}`}>
+                    <img
+                      src={photo.thumbnailUrl || photo.url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {isHeifFile && (
+                      <div className="absolute top-1 left-1 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded">
+                        HEIF
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => removePhoto(photo.id)}
+                    className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 py-0.5 rounded">
+                    #{index + 1}
+                  </div>
                 </div>
-                <button
-                  onClick={() => removePhoto(photo.id)}
-                  className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 shadow-lg"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-                <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 py-0.5 rounded">
-                  #{index + 1}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
